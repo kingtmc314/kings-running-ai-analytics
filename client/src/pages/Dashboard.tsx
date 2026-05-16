@@ -88,7 +88,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen running-bg overflow-hidden">
       {/* ── Sidebar ── */}
       <aside
         className={cn(
@@ -104,7 +104,7 @@ export default function Dashboard() {
           </div>
           {sidebarOpen && (
             <div className="overflow-hidden">
-              <p className="font-display font-700 text-sm text-white leading-tight">King's Running</p>
+              <p className="font-display font-700 text-sm text-sidebar-foreground leading-tight">King's Running</p>
               <p className="text-[10px] text-muted-foreground leading-tight">AI Analytics</p>
             </div>
           )}
@@ -160,14 +160,14 @@ export default function Dashboard() {
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+        <header className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card shrink-0 shadow-sm">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
             {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
-          <h1 className="font-display font-700 text-base text-white">
+          <h1 className="font-display font-700 text-base text-foreground">
             {NAV_ITEMS.find((n) => n.id === activeTab)?.label}
           </h1>
           <div className="ml-auto flex items-center gap-2">

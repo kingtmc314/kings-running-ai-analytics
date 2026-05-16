@@ -1,26 +1,27 @@
 // =============================================================
 // Shoe Locker Tab — King's Running AI Analytics
-// Design: Photo cards with brand+name distance matching,
-//         sort controls, and status filters.
+// Light Running Theme — clickable cards open activity history popup
 // =============================================================
 import { useMemo, useState } from "react";
 import {
   ShoppingBag, Activity, Calendar, ChevronUp, ChevronDown,
   ChevronsUpDown, DollarSign, Ruler, Hash, ExternalLink,
+  Footprints, Timer, Zap, X,
 } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
-import { formatDateDisplay } from "@/lib/runningData";
+import { formatDateDisplay, parseDate, logToSeconds, secondsToHMS, paceToString, getShoeName, getHRZone, RUN_TYPE_COLORS } from "@/lib/runningData";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // ─── Constants ────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, string> = {
-  "In Use":          "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  "Not Yet Opened":  "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  "Retired":         "bg-slate-500/20 text-slate-300 border-slate-500/30",
+  "In Use":          "bg-emerald-100 text-emerald-700 border-emerald-300",
+  "Not Yet Opened":  "bg-blue-100 text-blue-700 border-blue-300",
+  "Retired":         "bg-slate-100 text-slate-500 border-slate-300",
 };
 
-const MAX_SHOE_DIST = 800; // km before retirement warning
+const MAX_SHOE_DIST = 800;
 
 type SortKey = "status" | "dist" | "sessions" | "price" | "costperkm" | "purchase";
 type SortDir = "asc" | "desc";
@@ -34,13 +35,148 @@ const SORT_OPTIONS: { key: SortKey; label: string; icon: React.ElementType }[] =
   { key: "purchase",  label: "Purchased",  icon: Calendar },
 ];
 
-// ─── Component ────────────────────────────────────────────────
+// ─── Shoe Activity History Popup ──────────────────────────────
+
+function ShoeHistoryModal({
+  shoeName,
+  photoUrl,
+  onClose,
+}: {
+  shoeName: string | null;
+  photoUrl: string;
+  onClose: () => void;
+}) {
+  const { logs, latestRestingHR } = useData();
+
+  const shoeActivities = useMemo(() => {
+    if (!shoeName) return [];
+    return logs
+      .filter((l) => getShoeName(l) === shoeName)
+      .sort((a, b) => {
+        const da = parseDate(a.Date)?.getTime() || 0;
+        const db = parseDate(b.Date)?.getTime() || 0;
+        return db - da;
+      });
+  }, [logs, shoeName]);
+
+  const totalKm = useMemo(
+    () => shoeActivities.reduce((s, l) => {
+      const raw = l as unknown as Record<string, unknown>;
+      return s + (parseFloat(String(raw["Distance (km)"] ?? "0")) || 0);
+    }, 0),
+    [shoeActivities]
+  );
+
+  const avgPace = useMemo(() => {
+    let totalSec = 0, totalDist = 0;
+    shoeActivities.forEach((l) => {
+      const raw = l as unknown as Record<string, unknown>;
+      const dist = parseFloat(String(raw["Distance (km)"] ?? "0")) || 0;
+      const t = logToSeconds(l);
+      if (dist > 0 && t > 0) { totalSec += t; totalDist += dist; }
+    });
+    return totalDist > 0 ? (totalSec / 60) / totalDist * 60 : 0;
+  }, [shoeActivities]);
+
+  if (!shoeName) return null;
+
+  return (
+    <Dialog open={!!shoeName} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-white border-border">
+        <DialogHeader className="shrink-0">
+          <div className="flex items-center gap-3">
+            {photoUrl && (
+              <img src={photoUrl} alt={shoeName} className="w-14 h-14 object-contain rounded-lg bg-secondary p-1 shrink-0" />
+            )}
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground mb-0.5">Shoe Activity History</p>
+              <DialogTitle className="font-display text-base text-foreground leading-snug">{shoeName}</DialogTitle>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {/* Summary stats */}
+        <div className="grid grid-cols-3 gap-3 shrink-0">
+          <div className="bg-secondary rounded-xl p-3 text-center">
+            <p className="font-mono-metric text-xl font-bold text-foreground">{shoeActivities.length}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Sessions</p>
+          </div>
+          <div className="bg-secondary rounded-xl p-3 text-center">
+            <p className="font-mono-metric text-xl font-bold text-primary">{totalKm.toFixed(1)}<span className="text-sm font-normal text-muted-foreground ml-1">km</span></p>
+            <p className="text-xs text-muted-foreground mt-0.5">Total Distance</p>
+          </div>
+          <div className="bg-secondary rounded-xl p-3 text-center">
+            <p className="font-mono-metric text-xl font-bold text-foreground">{avgPace > 0 ? paceToString(avgPace) : "—"}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Avg Pace /km</p>
+          </div>
+        </div>
+
+        {/* Activity list */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {shoeActivities.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground text-sm">No activities recorded with this shoe.</div>
+          ) : (
+            <div className="space-y-1.5">
+              {shoeActivities.map((l, i) => {
+                const raw = l as unknown as Record<string, unknown>;
+                const dist = parseFloat(String(raw["Distance (km)"] ?? "0")) || 0;
+                const timeSec = logToSeconds(l);
+                const paceSec = dist > 0 && timeSec > 0 ? (timeSec / 60) / dist * 60 : 0;
+                const avgHR = parseFloat(String(raw["Average Heart Rate"] ?? "0")) || 0;
+                const zone = getHRZone(avgHR, latestRestingHR);
+                const rt = String(raw["Running Type"] || "");
+                const rtColor = RUN_TYPE_COLORS[rt] || "#64748b";
+                return (
+                  <div key={i} className="flex items-center gap-3 bg-secondary/60 hover:bg-secondary rounded-xl px-3 py-2.5 transition-colors">
+                    <div className="shrink-0 text-center w-14">
+                      <p className="text-[10px] text-muted-foreground">{formatDateDisplay(l.Date)}</p>
+                    </div>
+                    <div className="shrink-0">
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full font-semibold text-white"
+                        style={{ background: rtColor }}
+                      >
+                        {rt || "Run"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 ml-auto text-xs font-mono-metric">
+                      <span className="flex items-center gap-1 text-foreground font-semibold">
+                        <Footprints className="w-3 h-3 text-muted-foreground" />
+                        {dist > 0 ? `${dist.toFixed(2)} km` : "—"}
+                      </span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Timer className="w-3 h-3" />
+                        {timeSec > 0 ? secondsToHMS(timeSec) : "—"}
+                      </span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Zap className="w-3 h-3" />
+                        {paceSec > 0 ? `${paceToString(paceSec)}/km` : "—"}
+                      </span>
+                      {avgHR > 0 && (
+                        <span className={cn("flex items-center gap-1 font-semibold", zone.color)}>
+                          ♥ {avgHR}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────
 
 export default function ShoeLockerTab() {
   const { processedShoes } = useData();
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortKey, setSortKey] = useState<SortKey>("status");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selectedShoe, setSelectedShoe] = useState<{ name: string; photo: string } | null>(null);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -99,15 +235,15 @@ export default function ShoeLockerTab() {
       {/* ── Summary stats ───────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-white">{processedShoes.length}</p>
+          <p className="font-display font-700 text-2xl text-foreground">{processedShoes.length}</p>
           <p className="text-xs text-muted-foreground mt-1">Total Shoes</p>
         </div>
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-emerald-400">{inUseCount}</p>
+          <p className="font-display font-700 text-2xl text-emerald-600">{inUseCount}</p>
           <p className="text-xs text-muted-foreground mt-1">In Rotation</p>
         </div>
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-amber-400">HK${totalSpend.toLocaleString()}</p>
+          <p className="font-display font-700 text-2xl text-amber-600">HK${totalSpend.toLocaleString()}</p>
           <p className="text-xs text-muted-foreground mt-1">Total Investment</p>
         </div>
         <div className="glass-card rounded-xl p-4 text-center">
@@ -127,8 +263,8 @@ export default function ShoeLockerTab() {
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
                 statusFilter === s
-                  ? "bg-primary/20 text-primary border-primary/40"
-                  : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20"
+                  ? "bg-primary/15 text-primary border-primary/40"
+                  : "bg-white border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
               )}
             >
               {s}
@@ -136,7 +272,7 @@ export default function ShoeLockerTab() {
           ))}
         </div>
 
-        <div className="w-px h-5 bg-white/10 hidden sm:block" />
+        <div className="w-px h-5 bg-border hidden sm:block" />
 
         {/* Sort chips */}
         <div className="flex flex-wrap gap-1.5 items-center">
@@ -150,8 +286,8 @@ export default function ShoeLockerTab() {
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all border",
                   active
-                    ? "bg-primary/20 text-primary border-primary/40"
-                    : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20 hover:text-white"
+                    ? "bg-primary/15 text-primary border-primary/40"
+                    : "bg-white text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
                 )}
               >
                 <Icon className="w-3 h-3" />
@@ -167,7 +303,7 @@ export default function ShoeLockerTab() {
         </div>
 
         <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
-          {filtered.length} shoe{filtered.length !== 1 ? "s" : ""}
+          {filtered.length} shoe{filtered.length !== 1 ? "s" : ""} · Click a card to view activities
         </span>
       </div>
 
@@ -180,10 +316,8 @@ export default function ShoeLockerTab() {
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((shoe, i) => {
             const raw = shoe as unknown as Record<string, unknown>;
-            // Use Shoes Name (full brand+name) as the canonical display name
             const fullName = String(raw["Shoes Name"] || raw["Shoes"] || "Unknown");
             const brand = String(raw["Shoes Brand"] || "");
-            // Short name = remove brand prefix for cleaner display
             const shortName = brand && fullName.startsWith(brand)
               ? fullName.slice(brand.length).trim()
               : fullName;
@@ -196,12 +330,15 @@ export default function ShoeLockerTab() {
               <div
                 key={i}
                 className={cn(
-                  "glass-card rounded-xl border overflow-hidden transition-all hover:border-white/20 hover:-translate-y-0.5",
-                  isWarning ? "border-orange-500/30" : "border-white/8"
+                  "glass-card rounded-xl border overflow-hidden transition-all cursor-pointer",
+                  "hover:shadow-lg hover:-translate-y-1 hover:border-primary/40",
+                  isWarning ? "border-orange-300" : "border-border"
                 )}
+                onClick={() => setSelectedShoe({ name: fullName, photo: photoUrl })}
+                title="Click to view all activities with this shoe"
               >
                 {/* ── Photo section ─────────────────────────── */}
-                <div className="relative h-44 bg-white/5 overflow-hidden">
+                <div className="relative h-44 bg-secondary/50 overflow-hidden">
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -213,28 +350,29 @@ export default function ShoeLockerTab() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <ShoppingBag className="w-12 h-12 text-white/20" />
+                      <ShoppingBag className="w-12 h-12 text-muted-foreground/30" />
                     </div>
                   )}
 
                   {/* Status badge overlay */}
                   <div className="absolute top-2 right-2">
                     <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full border backdrop-blur-sm",
-                      STATUS_COLORS[status] || "bg-slate-500/20 text-slate-300 border-slate-500/30"
+                      "text-[10px] px-2 py-0.5 rounded-full border font-medium",
+                      STATUS_COLORS[status] || "bg-slate-100 text-slate-500 border-slate-300"
                     )}>
                       {status}
                     </span>
                   </div>
 
-                  {/* Photo link */}
+                  {/* Photo link — stop propagation so it doesn't open the popup */}
                   {photoUrl && (
                     <a
                       href={photoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-black/40 text-white/60 hover:text-white hover:bg-black/60 transition-all"
+                      className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-white/70 text-muted-foreground hover:text-foreground hover:bg-white transition-all"
                       title="View full photo"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="w-3 h-3" />
                     </a>
@@ -242,10 +380,17 @@ export default function ShoeLockerTab() {
 
                   {/* Warning overlay */}
                   {isWarning && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-orange-500/20 backdrop-blur-sm px-3 py-1.5 text-[10px] text-orange-300 text-center">
+                    <div className="absolute bottom-0 left-0 right-0 bg-orange-100/90 backdrop-blur-sm px-3 py-1.5 text-[10px] text-orange-700 text-center font-medium">
                       ⚠ Approaching {MAX_SHOE_DIST} km retirement
                     </div>
                   )}
+
+                  {/* "View activities" hint */}
+                  <div className="absolute inset-0 bg-primary/0 hover:bg-primary/5 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                    <span className="bg-white/90 text-primary text-[10px] font-semibold px-3 py-1.5 rounded-full shadow">
+                      View {shoe.usageCount} activities →
+                    </span>
+                  </div>
                 </div>
 
                 {/* ── Card body ─────────────────────────────── */}
@@ -253,22 +398,22 @@ export default function ShoeLockerTab() {
                   {/* Name + brand */}
                   <div>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{brand}</p>
-                    <p className="font-display font-600 text-white text-sm leading-snug mt-0.5">{shortName}</p>
+                    <p className="font-display font-600 text-foreground text-sm leading-snug mt-0.5">{shortName}</p>
                   </div>
 
                   {/* Distance progress bar */}
                   <div>
                     <div className="flex justify-between text-[10px] mb-1">
                       <span className="text-muted-foreground">Distance used</span>
-                      <span className={cn("font-mono-metric font-600", isWarning ? "text-orange-400" : "text-white")}>
+                      <span className={cn("font-mono-metric font-600", isWarning ? "text-orange-600" : "text-foreground")}>
                         {shoe.totalDist.toFixed(1)} km
                       </span>
                     </div>
-                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all duration-700",
-                          distPct > 80 ? "bg-orange-400" : distPct > 50 ? "bg-amber-400" : "bg-primary"
+                          distPct > 80 ? "bg-orange-500" : distPct > 50 ? "bg-amber-500" : "bg-primary"
                         )}
                         style={{ width: `${distPct}%` }}
                       />
@@ -285,17 +430,17 @@ export default function ShoeLockerTab() {
                     <StatCell
                       label="Price"
                       value={shoe.parsedPrice > 0 ? `HK$${shoe.parsedPrice.toLocaleString()}` : "—"}
-                      color="text-amber-400"
+                      color="text-amber-600"
                     />
                     <StatCell
                       label="$/km"
                       value={shoe.costPerKm > 0 ? `$${shoe.costPerKm.toFixed(2)}` : "—"}
-                      color="text-emerald-400"
+                      color="text-emerald-600"
                     />
                   </div>
 
                   {/* Dates */}
-                  <div className="pt-2 border-t border-white/8 space-y-1">
+                  <div className="pt-2 border-t border-border space-y-1">
                     {!!raw["Purchase Date"] && (
                       <DateRow icon={Calendar} label="Purchased" value={formatDateDisplay(String(raw["Purchase Date"]))} />
                     )}
@@ -312,6 +457,13 @@ export default function ShoeLockerTab() {
           })}
         </div>
       )}
+
+      {/* Shoe Activity History Modal */}
+      <ShoeHistoryModal
+        shoeName={selectedShoe?.name ?? null}
+        photoUrl={selectedShoe?.photo ?? ""}
+        onClose={() => setSelectedShoe(null)}
+      />
     </div>
   );
 }
@@ -320,9 +472,9 @@ export default function ShoeLockerTab() {
 
 function StatCell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="bg-white/4 rounded-lg px-2 py-2 text-center">
+    <div className="bg-secondary rounded-lg px-2 py-2 text-center">
       <p className="text-[9px] text-muted-foreground mb-0.5">{label}</p>
-      <p className={cn("font-mono-metric text-xs font-600", color || "text-white")}>{value}</p>
+      <p className={cn("font-mono-metric text-xs font-600", color || "text-foreground")}>{value}</p>
     </div>
   );
 }
@@ -332,7 +484,7 @@ function DateRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
       <Icon className="w-3 h-3 shrink-0" />
       <span>{label}:</span>
-      <span className="text-white/70">{value}</span>
+      <span className="text-foreground/70">{value}</span>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // =============================================================
 // King's Running AI Analytics — App Shell
-// Design: Premium Sports Dashboard / Dark Glassmorphism
+// Design: Light Running Theme — energetic, airy, sporty
 // =============================================================
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,11 +10,11 @@ import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark">
+    <ThemeProvider defaultTheme="light">
       <TooltipProvider>
         <DataProvider>
           <Dashboard />
-          <Toaster position="top-right" theme="dark" />
+          <Toaster position="top-right" theme="light" />
         </DataProvider>
       </TooltipProvider>
     </ThemeProvider>

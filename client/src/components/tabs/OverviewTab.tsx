@@ -166,7 +166,7 @@ export default function OverviewTab() {
                 <Zap className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[10px] text-primary uppercase tracking-widest font-600">Next Race</span>
               </div>
-              <h3 className="font-display font-700 text-white text-lg leading-snug truncate">
+              <h3 className="font-display font-700 text-foreground text-lg leading-snug truncate">
                 {nextRace.race.賽事}
               </h3>
               <div className="flex flex-wrap items-center gap-3 mt-2">
@@ -178,7 +178,7 @@ export default function OverviewTab() {
                   <MapPin className="w-3.5 h-3.5" />
                   {parseFloat(String(nextRace.race["距離 (km)"] || "0")).toFixed(1)} km
                   {DIST_LABEL[String(nextRace.race["距離 (km)"]).trim()] && (
-                    <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded ml-0.5">
+                    <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-0.5">
                       {DIST_LABEL[String(nextRace.race["距離 (km)"]).trim()]}
                     </span>
                   )}
@@ -209,7 +209,7 @@ export default function OverviewTab() {
             const d = parseDate(r.日期);
             return d && d >= new Date() && !r.完成 && r.賽事 !== nextRace.race.賽事;
           }).slice(0, 3).length > 0 && (
-            <div className="mt-4 pt-4 border-t border-white/8">
+            <div className="mt-4 pt-4 border-t border-border">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Also Coming Up</p>
               <div className="flex flex-wrap gap-2">
                 {races
@@ -223,9 +223,9 @@ export default function OverviewTab() {
                     const d = parseDate(r.日期);
                     const daysAway = d ? Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
                     return (
-                      <div key={i} className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/8">
+                      <div key={i} className="flex items-center gap-2 bg-secondary rounded-lg px-3 py-1.5 border border-border">
                         <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs text-white/80 truncate max-w-[160px]">{r.賽事}</span>
+                        <span className="text-xs text-foreground truncate max-w-[160px]">{r.賽事}</span>
                         <span className="text-[10px] text-primary font-mono-metric shrink-0">{daysAway}d</span>
                       </div>
                     );
@@ -241,7 +241,7 @@ export default function OverviewTab() {
         <div className="glass-card rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Heart className="w-4 h-4 text-red-400" />
-            <h2 className="font-display font-600 text-white text-sm">Current Heart Rate Zones (Karvonen)</h2>
+            <h2 className="font-display font-600 text-foreground text-sm">Current Heart Rate Zones (Karvonen)</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-4">
             Based on Max HR: 202 bpm and latest Resting HR: {latestRestingHR} bpm
@@ -250,7 +250,7 @@ export default function OverviewTab() {
             {ZONE_CONFIG.map((z) => (
               <div key={z.key} className={cn("rounded-lg border p-3 text-center", z.bg)}>
                 <p className="text-[10px] font-600 mb-1" style={{ color: z.color }}>{z.label}</p>
-                <p className="font-mono-metric font-600 text-white text-sm">
+                <p className="font-mono-metric font-600 text-foreground text-sm">
                   {hrZones[z.key as keyof typeof hrZones]}
                 </p>
               </div>
@@ -263,7 +263,7 @@ export default function OverviewTab() {
       <div className="glass-card rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Flame className="w-4 h-4 text-amber-400" />
-          <h2 className="font-display font-600 text-white text-sm">Personal Bests</h2>
+          <h2 className="font-display font-600 text-foreground text-sm">Personal Bests</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {PB_DISTANCES.map((d) => {
@@ -275,17 +275,17 @@ export default function OverviewTab() {
             return (
               <div
                 key={d.key}
-                className="bg-slate-800/60 rounded-xl p-4 border border-white/5 relative overflow-hidden"
+                className="bg-secondary rounded-xl p-4 border border-border relative overflow-hidden"
               >
                 <span className="absolute top-2 left-2 text-[10px] font-700 bg-amber-500 text-black px-1.5 py-0.5 rounded font-display">
                   PB
                 </span>
                 <p className="text-xs text-muted-foreground mt-5 mb-1">{d.label}</p>
-                <p className="font-mono-metric font-600 text-white text-lg leading-none">{time}</p>
+                <p className="font-mono-metric font-600 text-foreground text-lg leading-none">{time}</p>
                 <p className="font-mono-metric text-xs text-muted-foreground mt-0.5">{pace} /km</p>
-                <p className="text-xs text-slate-400 mt-2 truncate">{event}</p>
+                <p className="text-xs text-muted-foreground mt-2 truncate">{event}</p>
                 <p className="text-[10px] text-muted-foreground">{date}</p>
-                <Trophy className="absolute bottom-3 right-3 w-10 h-10 text-white/5" />
+                <Trophy className="absolute bottom-3 right-3 w-10 h-10 text-primary/10" />
               </div>
             );
           })}
@@ -297,7 +297,7 @@ export default function OverviewTab() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-600 text-white text-sm">Activity Trend (Last 12 Months)</h2>
+            <h2 className="font-display font-600 text-foreground text-sm">Activity Trend (Last 12 Months)</h2>
           </div>
           <span className="text-xs text-muted-foreground font-mono-metric">
             Total: {totalKm.toFixed(1)} km
@@ -363,8 +363,8 @@ function StatCard({
         <Icon className={cn("w-6 h-6", iconColor)} />
       </div>
       <div>
-        <p className="font-display font-700 text-2xl text-white leading-none">{value}</p>
-        <p className="text-xs font-medium text-white/80 mt-0.5">{label}</p>
+        <p className="font-display font-700 text-2xl text-foreground leading-none">{value}</p>
+        <p className="text-xs font-medium text-muted-foreground mt-0.5">{label}</p>
         <p className="text-[10px] text-muted-foreground">{sub}</p>
       </div>
     </div>
@@ -383,13 +383,13 @@ function CountdownUnit({
       <div
         className={cn(
           "w-14 h-14 rounded-xl flex items-center justify-center",
-          "bg-slate-800/80 border border-white/10 backdrop-blur-sm",
+          "bg-secondary border border-border shadow-sm",
           live && "border-primary/30 bg-primary/10"
         )}
       >
         <span className={cn(
           "font-display font-700 text-xl tabular-nums",
-          live ? "text-primary" : "text-white"
+          live ? "text-primary" : "text-foreground"
         )}>
           {String(value).padStart(2, "0")}
         </span>
@@ -401,6 +401,6 @@ function CountdownUnit({
 
 function CountdownSep() {
   return (
-    <span className="font-display font-700 text-white/30 text-xl pb-4 select-none">:</span>
+    <span className="font-display font-700 text-muted-foreground/50 text-xl pb-4 select-none">:</span>
   );
 }
