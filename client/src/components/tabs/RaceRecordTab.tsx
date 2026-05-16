@@ -1,6 +1,6 @@
 // =============================================================
 // Race Record Tab — King's Running AI Analytics
-// Design: Dark glassmorphism, sortable card grid with column-sort chips
+// Light theme: slate text on white cards, clear contrast
 // =============================================================
 import { useMemo, useState } from "react";
 import {
@@ -45,7 +45,6 @@ export default function RaceRecordTab() {
 
   const now = new Date();
 
-  // Toggle sort: same key → flip dir; new key → desc
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("desc"); }
@@ -96,18 +95,18 @@ export default function RaceRecordTab() {
     <div className="space-y-5">
       {/* ── Summary stat cards ─────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard value={raceStats.totalRaces} label="Total Races" color="text-white" />
-        <StatCard value={Object.keys(raceStats.bestTimes).length} label="Personal Bests" color="text-amber-400" />
-        <StatCard value={upcomingCount} label="Upcoming" color="text-emerald-400" />
+        <StatCard value={raceStats.totalRaces} label="Total Races" color="text-slate-800" />
+        <StatCard value={Object.keys(raceStats.bestTimes).length} label="Personal Bests" color="text-amber-600" />
+        <StatCard value={upcomingCount} label="Upcoming" color="text-emerald-600" />
         <StatCard
           value={processedRacesList.filter((r) => r.完成).length}
           label="Completed"
-          color="text-blue-400"
+          color="text-blue-600"
         />
       </div>
 
       {/* ── Controls row: filter + sort chips ──────────────── */}
-      <div className="glass-card rounded-xl p-3 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center gap-3 shadow-sm">
         {/* Filter */}
         <div className="flex gap-1.5 shrink-0">
           {(["all", "completed", "upcoming"] as const).map((f) => (
@@ -117,8 +116,8 @@ export default function RaceRecordTab() {
               className={cn(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
                 filter === f
-                  ? "bg-primary/20 text-primary border-primary/40"
-                  : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20"
+                  ? "bg-primary/15 text-primary border-primary/40"
+                  : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-900"
               )}
             >
               {f === "all" ? "All" : f === "completed" ? "Completed" : "Upcoming"}
@@ -126,11 +125,11 @@ export default function RaceRecordTab() {
           ))}
         </div>
 
-        <div className="w-px h-5 bg-white/10 hidden sm:block" />
+        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
 
         {/* Sort chips */}
         <div className="flex flex-wrap gap-1.5 items-center">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mr-1">Sort:</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mr-1">Sort:</span>
           {SORT_COLUMNS.map(({ key, label, icon: Icon }) => {
             const active = sortKey === key;
             return (
@@ -140,8 +139,8 @@ export default function RaceRecordTab() {
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all border",
                   active
-                    ? "bg-primary/20 text-primary border-primary/40"
-                    : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20 hover:text-white"
+                    ? "bg-primary/15 text-primary border-primary/40"
+                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-900"
                 )}
               >
                 <Icon className="w-3 h-3" />
@@ -156,14 +155,14 @@ export default function RaceRecordTab() {
           })}
         </div>
 
-        <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+        <span className="ml-auto text-[10px] text-slate-500 shrink-0">
           {sorted.length} race{sorted.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       {/* ── Race cards grid ─────────────────────────────────── */}
       {sorted.length === 0 ? (
-        <div className="glass-card rounded-xl p-12 text-center text-muted-foreground text-sm">
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500 text-sm">
           No races found.
         </div>
       ) : (
@@ -187,12 +186,12 @@ export default function RaceRecordTab() {
               <div
                 key={i}
                 className={cn(
-                  "glass-card rounded-xl border transition-all hover:border-white/20 hover:-translate-y-0.5 overflow-hidden",
+                  "bg-white rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md overflow-hidden shadow-sm",
                   isUpcoming
-                    ? "border-blue-500/20 opacity-80"
+                    ? "border-blue-200"
                     : isPB
-                    ? "border-amber-500/25"
-                    : "border-white/8"
+                    ? "border-amber-300"
+                    : "border-slate-200"
                 )}
               >
                 {/* Card header band */}
@@ -200,19 +199,19 @@ export default function RaceRecordTab() {
                   className={cn(
                     "px-4 py-2.5 flex items-center justify-between gap-2",
                     isUpcoming
-                      ? "bg-blue-500/10"
+                      ? "bg-blue-50"
                       : isPB
-                      ? "bg-amber-500/10"
-                      : "bg-white/4"
+                      ? "bg-amber-50"
+                      : "bg-slate-50"
                   )}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     {isPB && (
-                      <span className="text-[9px] font-700 bg-amber-500 text-black px-1.5 py-0.5 rounded font-display shrink-0">
+                      <span className="text-[9px] font-700 bg-amber-500 text-white px-1.5 py-0.5 rounded font-display shrink-0">
                         PB
                       </span>
                     )}
-                    <span className="text-white font-display font-600 text-sm truncate">
+                    <span className="text-slate-800 font-display font-600 text-sm truncate">
                       {race.賽事}
                     </span>
                   </div>
@@ -223,16 +222,16 @@ export default function RaceRecordTab() {
                 <div className="px-4 py-3 space-y-3">
                   {/* Date + distance row */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500">
                       <Calendar className="w-3.5 h-3.5 shrink-0" />
                       {formatDateDisplay(race.日期)}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-mono-metric text-white text-sm font-600">
+                      <span className="font-mono-metric text-slate-800 text-sm font-600">
                         {distKm > 0 ? `${distKm} km` : "—"}
                       </span>
                       {distLabel && (
-                        <span className="text-[9px] bg-white/10 text-muted-foreground px-1.5 py-0.5 rounded">
+                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
                           {distLabel}
                         </span>
                       )}
@@ -245,13 +244,13 @@ export default function RaceRecordTab() {
                       icon={Clock}
                       label="Time"
                       value={race.timeSec > 0 ? secondsToHMS(race.timeSec) : "—"}
-                      color="text-white"
+                      color="text-slate-800"
                     />
                     <MetricCell
                       icon={TrendingUp}
                       label="Pace"
                       value={race.paceSec > 0 ? paceToString(race.paceSec) : "—"}
-                      color="text-muted-foreground"
+                      color="text-slate-700"
                     />
                   </div>
 
@@ -261,32 +260,32 @@ export default function RaceRecordTab() {
                       icon={Heart}
                       label="Avg HR"
                       value={avgHR > 0 ? `${avgHR} bpm` : "—"}
-                      color="text-red-400"
+                      color="text-red-600"
                     />
                     <MetricCell
                       icon={Footprints}
                       label="Shoe"
                       value={shoe || "—"}
-                      color="text-muted-foreground"
+                      color="text-slate-600"
                       truncate
                     />
                   </div>
 
                   {/* Placement row */}
                   {(overallPlace || agPlace) && (
-                    <div className="flex items-center gap-3 pt-2 border-t border-white/8">
+                    <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
                       {overallPlace && (
                         <div className="flex items-center gap-1.5 text-xs">
-                          <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="text-muted-foreground">Overall:</span>
-                          <span className="font-mono-metric text-white">{overallPlace}</span>
+                          <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="text-slate-500">Overall:</span>
+                          <span className="font-mono-metric text-slate-800 font-600">{overallPlace}</span>
                         </div>
                       )}
                       {agPlace && (
                         <div className="flex items-center gap-1.5 text-xs">
-                          <Star className="w-3.5 h-3.5 text-blue-400" />
-                          <span className="text-muted-foreground">AG:</span>
-                          <span className="font-mono-metric text-white">{agPlace}</span>
+                          <Star className="w-3.5 h-3.5 text-blue-500" />
+                          <span className="text-slate-500">AG:</span>
+                          <span className="font-mono-metric text-slate-800 font-600">{agPlace}</span>
                         </div>
                       )}
                     </div>
@@ -305,9 +304,9 @@ export default function RaceRecordTab() {
 
 function StatCard({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <div className="glass-card rounded-xl p-4 text-center">
+    <div className="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm">
       <p className={cn("font-display font-700 text-2xl", color)}>{value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{label}</p>
+      <p className="text-xs text-slate-500 mt-1">{label}</p>
     </div>
   );
 }
@@ -315,18 +314,18 @@ function StatCard({ value, label, color }: { value: number; label: string; color
 function StatusBadge({ isUpcoming, completed }: { isUpcoming: boolean; completed: boolean }) {
   if (isUpcoming)
     return (
-      <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full shrink-0">
+      <span className="text-[10px] bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full shrink-0 font-medium">
         Upcoming
       </span>
     );
   if (completed)
     return (
-      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+      <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0 font-medium">
         Finished
       </span>
     );
   return (
-    <span className="text-[10px] bg-slate-500/20 text-slate-300 border border-slate-500/30 px-2 py-0.5 rounded-full shrink-0">
+    <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
       —
     </span>
   );
@@ -346,10 +345,10 @@ function MetricCell({
   truncate?: boolean;
 }) {
   return (
-    <div className="bg-white/4 rounded-lg px-2.5 py-2">
+    <div className="bg-slate-50 rounded-lg px-2.5 py-2 border border-slate-100">
       <div className="flex items-center gap-1 mb-0.5">
-        <Icon className="w-3 h-3 text-muted-foreground" />
-        <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</span>
+        <Icon className="w-3 h-3 text-slate-400" />
+        <span className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</span>
       </div>
       <p className={cn("font-mono-metric text-xs font-600", color, truncate && "truncate")}>{value}</p>
     </div>

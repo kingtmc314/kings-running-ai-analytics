@@ -55,13 +55,13 @@
 
   /* ── Light base — warm off-white ── */
   --background: oklch(0.97 0.005 60);
-  --foreground: oklch(0.22 0.018 240);
+  --foreground: oklch(0.18 0.020 240);
 
   /* Cards — pure white with subtle warmth */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.018 240);
+  --card-foreground: oklch(0.18 0.020 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.018 240);
+  --popover-foreground: oklch(0.18 0.020 240);
 
   /* Primary — vibrant coral-orange (running energy) */
   --primary: oklch(0.62 0.22 32);
@@ -69,11 +69,11 @@
 
   /* Secondary — light warm grey */
   --secondary: oklch(0.94 0.006 60);
-  --secondary-foreground: oklch(0.35 0.018 240);
+  --secondary-foreground: oklch(0.25 0.018 240);
 
-  /* Muted */
+  /* Muted — darkened for readability on white cards */
   --muted: oklch(0.93 0.006 60);
-  --muted-foreground: oklch(0.52 0.014 240);
+  --muted-foreground: oklch(0.38 0.018 240);
 
   /* Accent — forest green (nature/trail) */
   --accent: oklch(0.92 0.04 145);

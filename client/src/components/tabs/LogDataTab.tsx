@@ -28,7 +28,7 @@ export default function LogDataTab() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4 text-primary" />
-          <h2 className="font-display font-600 text-white text-sm">Raw Data from Google Sheets</h2>
+          <h2 className="font-display font-600 text-slate-800 text-sm">Raw Data from Google Sheets</h2>
         </div>
         <button
           onClick={() => fetchFromGoogle()}
@@ -50,7 +50,7 @@ export default function LogDataTab() {
               "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
               sheet === s.id
                 ? "bg-primary/20 text-primary border-primary/40"
-                : "bg-white/5 text-muted-foreground border-white/10 hover:border-white/20"
+                : "bg-slate-50 text-muted-foreground border-slate-200 hover:border-slate-300"
             )}
           >
             {s.label}
@@ -76,8 +76,8 @@ export default function LogDataTab() {
 function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
   return (
     <table className="w-full text-xs">
-      <thead className="sticky top-0 bg-slate-900">
-        <tr className="border-b border-white/8">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200">
           {["Date", "Type", "Dist (km)", "H", "M", "S", "Avg HR", "Max HR", "Shoe", "Calories", "Avg Cadence"].map((h) => (
             <th key={h} className="text-left px-3 py-2.5 text-muted-foreground font-medium whitespace-nowrap">{h}</th>
           ))}
@@ -85,10 +85,10 @@ function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
       </thead>
       <tbody>
         {[...logs].reverse().map((l, i) => (
-          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
+          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
             <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatDateDisplay(l.Date)}</td>
-            <td className="px-3 py-2 text-white">{l["Running Type"] || "—"}</td>
-            <td className="px-3 py-2 font-mono-metric text-white">{l["Distance (km)"] || "—"}</td>
+            <td className="px-3 py-2 text-slate-800">{l["Running Type"] || "—"}</td>
+            <td className="px-3 py-2 font-mono-metric text-slate-800">{l["Distance (km)"] || "—"}</td>
             <td className="px-3 py-2 font-mono-metric text-muted-foreground">{l.Hour || "0"}</td>
             <td className="px-3 py-2 font-mono-metric text-muted-foreground">{l.Minutes || "0"}</td>
             <td className="px-3 py-2 font-mono-metric text-muted-foreground">{l.Second || "0"}</td>
@@ -107,8 +107,8 @@ function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
 function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
   return (
     <table className="w-full text-xs">
-      <thead className="sticky top-0 bg-slate-900">
-        <tr className="border-b border-white/8">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200">
           {["Name", "Brand", "Status", "Price", "Purchase Date", "First Use", "Retired Date"].map((h) => (
             <th key={h} className="text-left px-3 py-2.5 text-muted-foreground font-medium whitespace-nowrap">{h}</th>
           ))}
@@ -116,8 +116,8 @@ function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
       </thead>
       <tbody>
         {shoes.map((s, i) => (
-          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
-            <td className="px-3 py-2 text-white">{s.Shoes || s["Shoes Name"] || "—"}</td>
+          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+            <td className="px-3 py-2 text-slate-800">{s.Shoes || s["Shoes Name"] || "—"}</td>
             <td className="px-3 py-2 text-muted-foreground">{s["Shoes Brand"] || "—"}</td>
             <td className="px-3 py-2 text-muted-foreground">{s.Status || "—"}</td>
             <td className="px-3 py-2 font-mono-metric text-emerald-400">{s["Shoes Price"] || "—"}</td>
@@ -134,8 +134,8 @@ function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
 function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
   return (
     <table className="w-full text-xs">
-      <thead className="sticky top-0 bg-slate-900">
-        <tr className="border-b border-white/8">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200">
           {["Race", "Date", "Distance (km)", "Completed", "Overall Place", "AG Place"].map((h) => (
             <th key={h} className="text-left px-3 py-2.5 text-muted-foreground font-medium whitespace-nowrap">{h}</th>
           ))}
@@ -143,10 +143,10 @@ function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
       </thead>
       <tbody>
         {races.map((r, i) => (
-          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
-            <td className="px-3 py-2 text-white">{r.賽事 || "—"}</td>
+          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
+            <td className="px-3 py-2 text-slate-800">{r.賽事 || "—"}</td>
             <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatDateDisplay(r.日期)}</td>
-            <td className="px-3 py-2 font-mono-metric text-white">{r["距離 (km)"] || "—"}</td>
+            <td className="px-3 py-2 font-mono-metric text-slate-800">{r["距離 (km)"] || "—"}</td>
             <td className="px-3 py-2">{r.完成 ? <span className="text-emerald-400">✓</span> : <span className="text-muted-foreground">—</span>}</td>
             <td className="px-3 py-2 text-muted-foreground">{r["Overall Place"] || "—"}</td>
             <td className="px-3 py-2 text-muted-foreground">{r["Age Group Place"] || "—"}</td>
@@ -160,8 +160,8 @@ function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
 function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) {
   return (
     <table className="w-full text-xs">
-      <thead className="sticky top-0 bg-slate-900">
-        <tr className="border-b border-white/8">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200">
           {["Date", "Weight", "BMI", "Body Fat %", "Fat Mass", "Muscle", "BMR", "Visceral Fat"].map((h) => (
             <th key={h} className="text-left px-3 py-2.5 text-muted-foreground font-medium whitespace-nowrap">{h}</th>
           ))}
@@ -169,9 +169,9 @@ function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) 
       </thead>
       <tbody>
         {[...body].reverse().map((b, i) => (
-          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
+          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
             <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatDateDisplay(b.Date)}</td>
-            <td className="px-3 py-2 font-mono-metric text-white">{b.Weight || "—"}</td>
+            <td className="px-3 py-2 font-mono-metric text-slate-800">{b.Weight || "—"}</td>
             <td className="px-3 py-2 font-mono-metric text-muted-foreground">{b.BMI || "—"}</td>
             <td className="px-3 py-2 font-mono-metric text-orange-400">{b.BodyFat || "—"}</td>
             <td className="px-3 py-2 font-mono-metric text-muted-foreground">{b.FatMass || "—"}</td>
@@ -188,8 +188,8 @@ function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) 
 function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }) {
   return (
     <table className="w-full text-xs">
-      <thead className="sticky top-0 bg-slate-900">
-        <tr className="border-b border-white/8">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200">
           {["Date", "Score", "Resting HR", "Body Battery", "Pulse Ox", "Respiration", "Stress", "Quality"].map((h) => (
             <th key={h} className="text-left px-3 py-2.5 text-muted-foreground font-medium whitespace-nowrap">{h}</th>
           ))}
@@ -197,7 +197,7 @@ function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }
       </thead>
       <tbody>
         {[...sleeps].reverse().map((s, i) => (
-          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
+          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
             <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatDateDisplay(s.Date)}</td>
             <td className="px-3 py-2 font-mono-metric text-blue-400">{s.Score || "—"}</td>
             <td className="px-3 py-2 font-mono-metric text-red-400">{s["Resting Heart Rate"] || "—"}</td>
@@ -216,8 +216,8 @@ function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }
 function HRTable({ hrs }: { hrs: ReturnType<typeof useData>["heartRates"] }) {
   return (
     <table className="w-full text-xs">
-      <thead className="sticky top-0 bg-slate-900">
-        <tr className="border-b border-white/8">
+      <thead className="sticky top-0 bg-white">
+        <tr className="border-b border-slate-200">
           {["Date", "Resting HR", "High HR"].map((h) => (
             <th key={h} className="text-left px-3 py-2.5 text-muted-foreground font-medium whitespace-nowrap">{h}</th>
           ))}
@@ -225,7 +225,7 @@ function HRTable({ hrs }: { hrs: ReturnType<typeof useData>["heartRates"] }) {
       </thead>
       <tbody>
         {[...hrs].reverse().map((h, i) => (
-          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
+          <tr key={i} className="border-b border-slate-100 hover:bg-slate-50">
             <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatDateDisplay(h.Date)}</td>
             <td className="px-3 py-2 font-mono-metric text-red-400">{h.Resting || "—"} bpm</td>
             <td className="px-3 py-2 font-mono-metric text-orange-400">{h.High || "—"}</td>

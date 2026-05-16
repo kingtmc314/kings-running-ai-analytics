@@ -84,9 +84,9 @@ function DropdownSlicer({
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all",
-          open || (multiSelect ? (selected?.length ?? 0) > 0 : value !== "All")
+            open || (multiSelect ? (selected?.length ?? 0) > 0 : value !== "All")
             ? "bg-primary/15 border-primary/40 text-primary"
-            : "bg-white/5 border-white/10 text-muted-foreground hover:border-white/20 hover:text-white"
+            : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
         )}
       >
         <span className="font-medium">{displayLabel}</span>
@@ -95,8 +95,8 @@ function DropdownSlicer({
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1.5 z-20 bg-slate-900 border border-white/15 rounded-xl shadow-2xl p-2 min-w-[160px] max-h-64 overflow-y-auto">
+          <div className="fixed inset-0 z-50" onClick={() => setOpen(false)} />
+          <div className="absolute top-full left-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-2xl p-2 min-w-[160px] max-h-64 overflow-y-auto">
             {options.map((opt) => {
               const isActive = multiSelect ? selected?.includes(opt) : value === opt;
               return (
@@ -109,8 +109,8 @@ function DropdownSlicer({
                   className={cn(
                     "w-full text-left px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-2",
                     isActive
-                      ? "bg-primary/20 text-primary"
-                      : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                      ? "bg-primary/15 text-primary"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
                   {multiSelect && (
@@ -254,9 +254,9 @@ export default function AnalyticsTab() {
   return (
     <div className="space-y-4">
       {/* ── Top control bar ─────────────────────────────────── */}
-      <div className="glass-card rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="glass-card rounded-xl p-3 flex flex-wrap items-center gap-2" style={{overflow:'visible', position:'relative', zIndex:10}}>
         {/* View toggle */}
-        <div className="flex gap-1 bg-white/5 rounded-lg p-0.5">
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-0.5">
           {VIEW_OPTIONS.map(({ key, label }) => (
             <button
               key={key}
@@ -264,8 +264,8 @@ export default function AnalyticsTab() {
               className={cn(
                 "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
                 view === key
-                  ? "bg-primary/25 text-primary shadow-sm"
-                  : "text-muted-foreground hover:text-white"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
               )}
             >
               {label}
@@ -273,7 +273,7 @@ export default function AnalyticsTab() {
           ))}
         </div>
 
-        <div className="w-px h-5 bg-white/10" />
+        <div className="w-px h-5 bg-slate-200" />
 
         {/* Filter dropdowns */}
         <DropdownSlicer
@@ -305,7 +305,7 @@ export default function AnalyticsTab() {
         {hasFilters && (
           <button
             onClick={resetFilters}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground border border-white/10 hover:border-white/20 hover:text-white transition-all"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-900 transition-all bg-white"
           >
             <RotateCcw className="w-3 h-3" />
             Reset
@@ -320,13 +320,13 @@ export default function AnalyticsTab() {
           </div>
           {view === "monthly" && avgPerMonth > 0 && (
             <div className="text-right">
-              <p className="font-mono-metric text-emerald-400 text-sm font-600">{avgPerMonth.toFixed(1)} km</p>
+              <p className="font-mono-metric text-emerald-600 text-sm font-600">{avgPerMonth.toFixed(1)} km</p>
               <p className="text-[9px] text-muted-foreground">Avg/Month</p>
             </div>
           )}
           {peakMonth && (
             <div className="text-right">
-              <p className="font-mono-metric text-amber-400 text-sm font-600">{((peakMonth as Record<string, unknown>).total as number || 0).toFixed(1)} km</p>
+              <p className="font-mono-metric text-amber-600 text-sm font-600">{((peakMonth as Record<string, unknown>).total as number || 0).toFixed(1)} km</p>
               <p className="text-[9px] text-muted-foreground">Peak: {peakMonth.key}</p>
             </div>
           )}
@@ -337,7 +337,7 @@ export default function AnalyticsTab() {
       <div className="glass-card rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-4 h-4 text-primary" />
-          <h2 className="font-display font-600 text-white text-sm">
+          <h2 className="font-display font-600 text-slate-800 text-sm">
             {VIEW_OPTIONS.find((v) => v.key === view)?.label} Distance Analysis
           </h2>
           <span className="text-[10px] text-muted-foreground ml-1">

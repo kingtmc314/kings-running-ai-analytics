@@ -87,7 +87,7 @@ export default function HeartRateTab() {
         <div className="glass-card rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <Heart className="w-4 h-4 text-primary" />
-            <h2 className="font-display font-600 text-white text-sm">Training Zone Distribution</h2>
+            <h2 className="font-display font-600 text-slate-800 text-sm">Training Zone Distribution</h2>
           </div>
           <div className="flex items-center gap-4">
             <ResponsiveContainer width="60%" height={200}>
@@ -105,7 +105,7 @@ export default function HeartRateTab() {
                 <div key={z.name} className="flex items-center gap-2 text-xs">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ZONE_COLORS[i % ZONE_COLORS.length] }} />
                   <span className="text-muted-foreground">{z.name}</span>
-                  <span className="font-mono-metric text-white ml-auto">{z.value}</span>
+                  <span className="font-mono-metric text-slate-800 ml-auto">{z.value}</span>
                 </div>
               ))}
             </div>
@@ -118,7 +118,7 @@ export default function HeartRateTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-white/8 bg-white/3">
+              <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Date</th>
                 <th className="text-right px-4 py-3 text-muted-foreground font-medium">Resting HR</th>
                 <th className="text-right px-4 py-3 text-muted-foreground font-medium">High HR</th>
@@ -126,7 +126,7 @@ export default function HeartRateTab() {
             </thead>
             <tbody>
               {[...sorted].reverse().map((h, i) => (
-                <tr key={i} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-2.5 text-muted-foreground">{formatDateDisplay(h.Date)}</td>
                   <td className="px-4 py-2.5 text-right font-mono-metric text-red-400">{h.Resting} bpm</td>
                   <td className="px-4 py-2.5 text-right font-mono-metric text-orange-400">{h.High || "—"}</td>
