@@ -1,3 +1,9 @@
+/* =============================================================
+   King's Running AI Analytics — Design System
+   Philosophy: Premium Sports Dashboard / Dark Glassmorphism
+   Fonts: Outfit (display) | DM Sans (body) | JetBrains Mono (metrics)
+   ============================================================= */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -43,75 +49,158 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  --radius: 0.75rem;
+
+  /* Dark base — deep slate */
+  --background: oklch(0.12 0.018 260);
+  --foreground: oklch(0.94 0.005 260);
+
+  /* Glass cards */
+  --card: oklch(0.17 0.018 260);
+  --card-foreground: oklch(0.94 0.005 260);
+  --popover: oklch(0.17 0.018 260);
+  --popover-foreground: oklch(0.94 0.005 260);
+
+  /* Primary — electric blue */
+  --primary: oklch(0.60 0.22 255);
+  --primary-foreground: oklch(0.98 0 0);
+
+  /* Secondary */
+  --secondary: oklch(0.22 0.018 260);
+  --secondary-foreground: oklch(0.82 0.008 260);
+
+  /* Muted */
+  --muted: oklch(0.20 0.014 260);
+  --muted-foreground: oklch(0.60 0.012 260);
+
+  /* Accent — violet-blue */
+  --accent: oklch(0.25 0.025 260);
+  --accent-foreground: oklch(0.94 0.005 260);
+
+  /* Destructive */
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  /* Borders & inputs */
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.60 0.22 255 / 60%);
+
+  /* Charts — zone palette */
+  --chart-1: oklch(0.65 0.18 255);   /* blue  — zone 1 */
+  --chart-2: oklch(0.68 0.18 155);   /* green — zone 2 */
+  --chart-3: oklch(0.80 0.18 85);    /* amber — zone 3 */
+  --chart-4: oklch(0.72 0.20 40);    /* orange — zone 4 */
+  --chart-5: oklch(0.62 0.22 25);    /* red   — zone 5 */
+
+  /* Sidebar */
+  --sidebar: oklch(0.10 0.018 260);
+  --sidebar-foreground: oklch(0.94 0.005 260);
+  --sidebar-primary: oklch(0.60 0.22 255);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.20 0.022 260);
+  --sidebar-accent-foreground: oklch(0.94 0.005 260);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.60 0.22 255 / 60%);
+
+  /* Custom zone colors (used inline) */
+  --zone1: #3b82f6;
+  --zone2: #10b981;
+  --zone3: #f59e0b;
+  --zone4: #f97316;
+  --zone5: #ef4444;
+
+  /* Run type colors */
+  --run-easy: #3b82f6;
+  --run-interval: #ef4444;
+  --run-long: #a855f7;
+  --run-race: #eab308;
+  --run-recovery: #10b981;
+  --run-trail: #78716c;
+  --run-fartlek: #ec4899;
+  --run-tempo: #f97316;
+  --run-sprint: #06b6d4;
+  --run-hr: #ef4444;
 }
 
-.dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+/* Typography */
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
 }
+
+.font-display {
+  font-family: 'Outfit', sans-serif;
+}
+
+.font-mono-metric {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Glass card utility */
+.glass-card {
+  background: oklch(1 0 0 / 5%);
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(1 0 0 / 10%);
+}
+
+.glass-card-elevated {
+  background: oklch(1 0 0 / 8%);
+  backdrop-filter: blur(16px);
+  border: 1px solid oklch(1 0 0 / 14%);
+  box-shadow: 0 4px 32px oklch(0 0 0 / 40%);
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 20px oklch(0.60 0.22 255 / 30%);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px oklch(0.68 0.18 155 / 30%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(1 0 0 / 15%); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 25%); }
+
+/* Animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes counter-in {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 oklch(0.60 0.22 255 / 40%); }
+  70%  { box-shadow: 0 0 0 8px oklch(0.60 0.22 255 / 0%); }
+  100% { box-shadow: 0 0 0 0 oklch(0.60 0.22 255 / 0%); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.3s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.animate-counter-in {
+  animation: counter-in 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* Stagger helpers */
+.stagger-1 { animation-delay: 40ms; }
+.stagger-2 { animation-delay: 80ms; }
+.stagger-3 { animation-delay: 120ms; }
+.stagger-4 { animation-delay: 160ms; }
+.stagger-5 { animation-delay: 200ms; }
+.stagger-6 { animation-delay: 240ms; }
 
 @layer base {
   * {
@@ -134,24 +223,11 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
 
@@ -162,16 +238,16 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1400px;
     }
   }
 }

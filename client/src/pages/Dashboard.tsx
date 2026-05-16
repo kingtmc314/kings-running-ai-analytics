@@ -1,0 +1,163 @@
+// =============================================================
+// King's Running AI Analytics — Dashboard Shell
+// =============================================================
+import { useState } from "react";
+import {
+  LayoutDashboard, BarChart2, Brain, Trophy, Scale,
+  Moon, Heart, Activity, ShoppingBag, PlusCircle, Menu, X,
+  RefreshCw, Zap,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useData } from "@/contexts/DataContext";
+import OverviewTab from "@/components/tabs/OverviewTab";
+import AnalyticsTab from "@/components/tabs/AnalyticsTab";
+import AICoachTab from "@/components/tabs/AICoachTab";
+import RaceRecordTab from "@/components/tabs/RaceRecordTab";
+import BodyFitnessTab from "@/components/tabs/BodyFitnessTab";
+import SleepTab from "@/components/tabs/SleepTab";
+import HeartRateTab from "@/components/tabs/HeartRateTab";
+import ActivitiesTab from "@/components/tabs/ActivitiesTab";
+import ShoeLockerTab from "@/components/tabs/ShoeLockerTab";
+import LogDataTab from "@/components/tabs/LogDataTab";
+
+type TabId =
+  | "overview" | "analytics" | "ai" | "race" | "body"
+  | "sleep" | "heartrate" | "activities" | "shoes" | "log";
+
+const NAV_ITEMS: { id: TabId; icon: React.ElementType; label: string }[] = [
+  { id: "overview",    icon: LayoutDashboard, label: "Overview" },
+  { id: "analytics",   icon: BarChart2,       label: "Analytics" },
+  { id: "ai",          icon: Brain,           label: "AI Coach" },
+  { id: "race",        icon: Trophy,          label: "Race Record" },
+  { id: "body",        icon: Scale,           label: "Body Fitness" },
+  { id: "sleep",       icon: Moon,            label: "Sleep" },
+  { id: "heartrate",   icon: Heart,           label: "Heart Rate" },
+  { id: "activities",  icon: Activity,        label: "Activities" },
+  { id: "shoes",       icon: ShoppingBag,     label: "Shoe Locker" },
+  { id: "log",         icon: PlusCircle,      label: "Log Data" },
+];
+
+export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { syncStatus, fetchFromGoogle } = useData();
+
+  const TAB_COMPONENTS: Record<TabId, React.ReactNode> = {
+    overview:   <OverviewTab />,
+    analytics:  <AnalyticsTab />,
+    ai:         <AICoachTab />,
+    race:       <RaceRecordTab />,
+    body:       <BodyFitnessTab />,
+    sleep:      <SleepTab />,
+    heartrate:  <HeartRateTab />,
+    activities: <ActivitiesTab />,
+    shoes:      <ShoeLockerTab />,
+    log:        <LogDataTab />,
+  };
+
+  return (
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* ── Sidebar ── */}
+      <aside
+        className={cn(
+          "flex flex-col shrink-0 h-full transition-all duration-300 ease-out",
+          "bg-sidebar border-r border-sidebar-border",
+          sidebarOpen ? "w-56" : "w-16"
+        )}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 glow-blue">
+            <Zap className="w-4 h-4 text-white" />
+          </div>
+          {sidebarOpen && (
+            <div className="overflow-hidden">
+              <p className="font-display font-700 text-sm text-white leading-tight">King's Running</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">AI Analytics</p>
+            </div>
+          )}
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 py-3 overflow-y-auto">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-150",
+                  "hover:bg-sidebar-accent hover:text-white",
+                  isActive
+                    ? "bg-primary/20 text-primary border-r-2 border-primary"
+                    : "text-muted-foreground"
+                )}
+                title={!sidebarOpen ? item.label : undefined}
+              >
+                <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "")} />
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sync button */}
+        <div className="p-3 border-t border-sidebar-border">
+          <button
+            onClick={() => fetchFromGoogle()}
+            disabled={syncStatus === "loading"}
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all",
+              "bg-sidebar-accent hover:bg-primary/20 text-muted-foreground hover:text-primary",
+              syncStatus === "loading" && "opacity-60 cursor-not-allowed"
+            )}
+            title={!sidebarOpen ? "Sync Data" : undefined}
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5 shrink-0", syncStatus === "loading" && "animate-spin")} />
+            {sidebarOpen && (
+              <span>
+                {syncStatus === "loading" ? "Syncing…" : syncStatus === "success" ? "Synced" : syncStatus === "error" ? "Retry Sync" : "Sync Data"}
+              </span>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main content ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card/50 backdrop-blur-sm shrink-0">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
+            {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+          <h1 className="font-display font-700 text-base text-white">
+            {NAV_ITEMS.find((n) => n.id === activeTab)?.label}
+          </h1>
+          <div className="ml-auto flex items-center gap-2">
+            {syncStatus === "success" && (
+              <span className="text-xs text-emerald-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                Live
+              </span>
+            )}
+            {syncStatus === "error" && (
+              <span className="text-xs text-red-400">Sync failed</span>
+            )}
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-5">
+          <div className="animate-fade-up">
+            {TAB_COMPONENTS[activeTab]}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
