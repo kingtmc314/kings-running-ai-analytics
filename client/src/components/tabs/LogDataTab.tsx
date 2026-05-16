@@ -303,12 +303,12 @@ export default function LogDataTab() {
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto max-h-[60vh]">
-          {sheet === "running" && <RunningTable logs={logs} />}
-          {sheet === "shoes" && <ShoesTable shoes={shoes} />}
-          {sheet === "races" && <RacesTable races={races} />}
-          {sheet === "body" && <BodyTable body={bodyStats} />}
-          {sheet === "sleep" && <SleepTable sleeps={sleeps} />}
-          {sheet === "hr" && <HRTable hrs={heartRates} />}
+          {sheet === "running" && <RunningTable logs={[...logs].reverse()} />}
+          {sheet === "shoes" && <ShoesTable shoes={[...shoes].reverse()} />}
+          {sheet === "races" && <RacesTable races={[...races].reverse()} />}
+          {sheet === "body" && <BodyTable body={[...bodyStats].reverse()} />}
+          {sheet === "sleep" && <SleepTable sleeps={[...sleeps].reverse()} />}
+          {sheet === "hr" && <HRTable hrs={[...heartRates].reverse()} />}
         </div>
       </div>
 
