@@ -6,12 +6,16 @@ import { useMemo, useState } from "react";
 import {
   ShoppingBag, Activity, Calendar, ChevronUp, ChevronDown,
   ChevronsUpDown, DollarSign, Ruler, Hash, ExternalLink,
-  Footprints, Timer, Zap, X,
+  Footprints, Timer, Zap, X, Pencil, Trash2,
 } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
-import { formatDateDisplay, parseDate, logToSeconds, secondsToHMS, paceToString, getShoeName, getHRZone, RUN_TYPE_COLORS } from "@/lib/runningData";
+import { formatDateDisplay, parseDate, logToSeconds, secondsToHMS, paceToString, getShoeName, getHRZone, RUN_TYPE_COLORS, Shoe } from "@/lib/runningData";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
+import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import { updateRow, deleteRow } from "@/lib/sheetsApi";
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -169,14 +173,67 @@ function ShoeHistoryModal({
   );
 }
 
+const SHOE_FIELDS: FieldDef[] = [
+  { key: "Shoes Name",    label: "Shoe Full Name",   type: "text",   required: true },
+  { key: "Shoes Brand",   label: "Brand",           type: "text" },
+  { key: "Status",        label: "Status",          type: "select", options: ["In Use", "Not Yet Opened", "Retired"] },
+  { key: "Price",         label: "Price (HKD)",     type: "number" },
+  { key: "Purchase Date", label: "Purchase Date",   type: "date" },
+  { key: "First Use",     label: "First Use Date",  type: "date" },
+  { key: "Retired Date",  label: "Retired Date",    type: "date" },
+];
+
 // ─── Main Component ───────────────────────────────────────────
 
 export default function ShoeLockerTab() {
-  const { processedShoes } = useData();
+  const { processedShoes, setShoes, fetchFromGoogle } = useData();
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortKey, setSortKey] = useState<SortKey>("status");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedShoe, setSelectedShoe] = useState<{ name: string; photo: string } | null>(null);
+
+  // Edit state
+  const [editShoe, setEditShoe] = useState<Record<string, unknown> | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Delete state
+  const [deleteShoe, setDeleteShoe] = useState<Record<string, unknown> | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  async function handleEditSave(data: Record<string, string>) {
+    if (!editShoe) return;
+    const row = editShoe["_row"] as number;
+    setEditLoading(true);
+    const result = await updateRow("Running Shoes", row, data);
+    setEditLoading(false);
+    if (result.success) {
+      setShoes((prev) => prev.map((s) => {
+        if ((s as unknown as Record<string, unknown>)["_row"] === row) return { ...s, ...data } as unknown as Shoe;
+        return s;
+      }));
+      toast.success("Shoe updated successfully");
+      setEditShoe(null);
+      fetchFromGoogle();
+    } else {
+      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteShoe) return;
+    const row = deleteShoe["_row"] as number;
+    setDeleteLoading(true);
+    const result = await deleteRow("Running Shoes", row);
+    setDeleteLoading(false);
+    if (result.success) {
+      setShoes((prev) => prev.filter((s) => (s as unknown as Record<string, unknown>)["_row"] !== row));
+      toast.success("Shoe deleted");
+      setDeleteShoe(null);
+      fetchFromGoogle();
+    } else {
+      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    }
+  }
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -354,14 +411,30 @@ export default function ShoeLockerTab() {
                     </div>
                   )}
 
-                  {/* Status badge overlay */}
-                  <div className="absolute top-2 right-2">
+                  {/* Status badge + edit/delete overlay */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full border font-medium",
                       STATUS_COLORS[status] || "bg-slate-100 text-slate-500 border-slate-300"
                     )}>
                       {status}
                     </span>
+                    {/* Edit button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditShoe(raw); }}
+                      className="p-1 rounded-lg bg-white/80 hover:bg-white text-blue-500 hover:text-blue-700 shadow transition-colors"
+                      title="Edit shoe"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    {/* Delete button */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteShoe(raw); }}
+                      className="p-1 rounded-lg bg-white/80 hover:bg-white text-red-400 hover:text-red-600 shadow transition-colors"
+                      title="Delete shoe"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
 
                   {/* Photo link — stop propagation so it doesn't open the popup */}
@@ -463,6 +536,27 @@ export default function ShoeLockerTab() {
         shoeName={selectedShoe?.name ?? null}
         photoUrl={selectedShoe?.photo ?? ""}
         onClose={() => setSelectedShoe(null)}
+      />
+
+      {/* Edit Modal */}
+      <EditRecordModal
+        open={!!editShoe}
+        onClose={() => setEditShoe(null)}
+        onSave={handleEditSave}
+        loading={editLoading}
+        title="Edit Shoe"
+        fields={SHOE_FIELDS}
+        initialValues={editShoe || {}}
+      />
+
+      {/* Delete Confirm */}
+      <DeleteConfirmDialog
+        open={!!deleteShoe}
+        onClose={() => setDeleteShoe(null)}
+        onConfirm={handleDeleteConfirm}
+        loading={deleteLoading}
+        title="Delete Shoe"
+        recordLabel={deleteShoe ? String(deleteShoe["Shoes Name"] || "this shoe") : undefined}
       />
     </div>
   );

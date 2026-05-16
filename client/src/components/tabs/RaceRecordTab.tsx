@@ -1,17 +1,22 @@
 // =============================================================
 // Race Record Tab — King's Running AI Analytics
 // Light theme: slate text on white cards, clear contrast
+// Edit and Delete per race card
 // =============================================================
 import { useMemo, useState } from "react";
 import {
   Trophy, Calendar, MapPin, Clock, TrendingUp, ChevronUp, ChevronDown,
-  ChevronsUpDown, Footprints, Heart, Star,
+  ChevronsUpDown, Footprints, Heart, Star, Pencil, Trash2,
 } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import {
-  parseDate, secondsToHMS, paceToString, formatDateDisplay, getShoeName,
+  parseDate, secondsToHMS, paceToString, formatDateDisplay, getShoeName, Race,
 } from "@/lib/runningData";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
+import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import { updateRow, deleteRow } from "@/lib/sheetsApi";
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -35,13 +40,30 @@ const SORT_COLUMNS: { key: SortKey; label: string; icon: React.ElementType }[] =
   { key: "ag",      label: "Age Group", icon: Star },
 ];
 
+const RACE_FIELDS: FieldDef[] = [
+  { key: "賽事",          label: "Race Name",       type: "text",   required: true },
+  { key: "日期",          label: "Date",            type: "date",   required: true },
+  { key: "距離 (km)",     label: "Distance (km)",   type: "number" },
+  { key: "完成",          label: "Completed",       type: "select", options: ["true", "false"] },
+  { key: "Overall Place", label: "Overall Place",   type: "text" },
+  { key: "Age Group Place", label: "Age Group Place", type: "text" },
+];
+
 // ─── Component ────────────────────────────────────────────────
 
 export default function RaceRecordTab() {
-  const { processedRacesList, raceStats } = useData();
+  const { processedRacesList, raceStats, races, setRaces, fetchFromGoogle } = useData();
   const [filter, setFilter] = useState<"all" | "completed" | "upcoming">("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Edit state
+  const [editRace, setEditRace] = useState<Record<string, unknown> | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Delete state
+  const [deleteRace, setDeleteRace] = useState<Record<string, unknown> | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const now = new Date();
 
@@ -91,6 +113,45 @@ export default function RaceRecordTab() {
     return !r.完成 && (!d || d >= now);
   }).length;
 
+  // ── Edit handler ──
+  async function handleEditSave(data: Record<string, string>) {
+    if (!editRace) return;
+    const row = editRace["_row"] as number;
+    setEditLoading(true);
+    const result = await updateRow("Race", row, data);
+    setEditLoading(false);
+    if (result.success) {
+      setRaces((prev) => prev.map((r) => {
+        if ((r as unknown as Record<string, unknown>)["_row"] === row) {
+          return { ...r, ...data } as unknown as Race;
+        }
+        return r;
+      }));
+      toast.success("Race updated successfully");
+      setEditRace(null);
+      fetchFromGoogle();
+    } else {
+      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    }
+  }
+
+  // ── Delete handler ──
+  async function handleDeleteConfirm() {
+    if (!deleteRace) return;
+    const row = deleteRace["_row"] as number;
+    setDeleteLoading(true);
+    const result = await deleteRow("Race", row);
+    setDeleteLoading(false);
+    if (result.success) {
+      setRaces((prev) => prev.filter((r) => (r as unknown as Record<string, unknown>)["_row"] !== row));
+      toast.success("Race deleted");
+      setDeleteRace(null);
+      fetchFromGoogle();
+    } else {
+      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* ── Summary stat cards ─────────────────────────────── */}
@@ -98,11 +159,7 @@ export default function RaceRecordTab() {
         <StatCard value={raceStats.totalRaces} label="Total Races" color="text-slate-800" />
         <StatCard value={Object.keys(raceStats.bestTimes).length} label="Personal Bests" color="text-amber-600" />
         <StatCard value={upcomingCount} label="Upcoming" color="text-emerald-600" />
-        <StatCard
-          value={processedRacesList.filter((r) => r.完成).length}
-          label="Completed"
-          color="text-blue-600"
-        />
+        <StatCard value={processedRacesList.filter((r) => r.完成).length} label="Completed" color="text-blue-600" />
       </div>
 
       {/* ── Controls row: filter + sort chips ──────────────── */}
@@ -181,30 +238,21 @@ export default function RaceRecordTab() {
             ) || 0;
             const overallPlace = String(race["Overall Place"] || "");
             const agPlace = String(race["Age Group Place"] || "");
+            const raceRaw = race as unknown as Record<string, unknown>;
 
             return (
               <div
                 key={i}
                 className={cn(
                   "bg-white rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md overflow-hidden shadow-sm",
-                  isUpcoming
-                    ? "border-blue-200"
-                    : isPB
-                    ? "border-amber-300"
-                    : "border-slate-200"
+                  isUpcoming ? "border-blue-200" : isPB ? "border-amber-300" : "border-slate-200"
                 )}
               >
                 {/* Card header band */}
-                <div
-                  className={cn(
-                    "px-4 py-2.5 flex items-center justify-between gap-2",
-                    isUpcoming
-                      ? "bg-blue-50"
-                      : isPB
-                      ? "bg-amber-50"
-                      : "bg-slate-50"
-                  )}
-                >
+                <div className={cn(
+                  "px-4 py-2.5 flex items-center justify-between gap-2",
+                  isUpcoming ? "bg-blue-50" : isPB ? "bg-amber-50" : "bg-slate-50"
+                )}>
                   <div className="flex items-center gap-2 min-w-0">
                     {isPB && (
                       <span className="text-[9px] font-700 bg-amber-500 text-white px-1.5 py-0.5 rounded font-display shrink-0">
@@ -215,7 +263,24 @@ export default function RaceRecordTab() {
                       {race.賽事}
                     </span>
                   </div>
-                  <StatusBadge isUpcoming={isUpcoming} completed={!!race.完成} />
+                  <div className="flex items-center gap-1 shrink-0">
+                    <StatusBadge isUpcoming={isUpcoming} completed={!!race.完成} />
+                    {/* Edit / Delete */}
+                    <button
+                      onClick={() => setEditRace(raceRaw)}
+                      className="p-1 rounded hover:bg-blue-100 text-blue-500 hover:text-blue-700 transition-colors ml-1"
+                      title="Edit race"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteRace(raceRaw)}
+                      className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                      title="Delete race"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Card body */}
@@ -240,35 +305,14 @@ export default function RaceRecordTab() {
 
                   {/* Time + Pace */}
                   <div className="grid grid-cols-2 gap-2">
-                    <MetricCell
-                      icon={Clock}
-                      label="Time"
-                      value={race.timeSec > 0 ? secondsToHMS(race.timeSec) : "—"}
-                      color="text-slate-800"
-                    />
-                    <MetricCell
-                      icon={TrendingUp}
-                      label="Pace"
-                      value={race.paceSec > 0 ? paceToString(race.paceSec) : "—"}
-                      color="text-slate-700"
-                    />
+                    <MetricCell icon={Clock} label="Time" value={race.timeSec > 0 ? secondsToHMS(race.timeSec) : "—"} color="text-slate-800" />
+                    <MetricCell icon={TrendingUp} label="Pace" value={race.paceSec > 0 ? paceToString(race.paceSec) : "—"} color="text-slate-700" />
                   </div>
 
                   {/* HR + Shoe */}
                   <div className="grid grid-cols-2 gap-2">
-                    <MetricCell
-                      icon={Heart}
-                      label="Avg HR"
-                      value={avgHR > 0 ? `${avgHR} bpm` : "—"}
-                      color="text-red-600"
-                    />
-                    <MetricCell
-                      icon={Footprints}
-                      label="Shoe"
-                      value={shoe || "—"}
-                      color="text-slate-600"
-                      truncate
-                    />
+                    <MetricCell icon={Heart} label="Avg HR" value={avgHR > 0 ? `${avgHR} bpm` : "—"} color="text-red-600" />
+                    <MetricCell icon={Footprints} label="Shoe" value={shoe || "—"} color="text-slate-600" truncate />
                   </div>
 
                   {/* Placement row */}
@@ -296,6 +340,27 @@ export default function RaceRecordTab() {
           })}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <EditRecordModal
+        open={!!editRace}
+        onClose={() => setEditRace(null)}
+        onSave={handleEditSave}
+        loading={editLoading}
+        title="Edit Race"
+        fields={RACE_FIELDS}
+        initialValues={editRace || {}}
+      />
+
+      {/* Delete Confirm */}
+      <DeleteConfirmDialog
+        open={!!deleteRace}
+        onClose={() => setDeleteRace(null)}
+        onConfirm={handleDeleteConfirm}
+        loading={deleteLoading}
+        title="Delete Race"
+        recordLabel={deleteRace ? String(deleteRace["賽事"] || "this race") : undefined}
+      />
     </div>
   );
 }
@@ -313,36 +378,14 @@ function StatCard({ value, label, color }: { value: number; label: string; color
 
 function StatusBadge({ isUpcoming, completed }: { isUpcoming: boolean; completed: boolean }) {
   if (isUpcoming)
-    return (
-      <span className="text-[10px] bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full shrink-0 font-medium">
-        Upcoming
-      </span>
-    );
+    return <span className="text-[10px] bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full shrink-0 font-medium">Upcoming</span>;
   if (completed)
-    return (
-      <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0 font-medium">
-        Finished
-      </span>
-    );
-  return (
-    <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">
-      —
-    </span>
-  );
+    return <span className="text-[10px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0 font-medium">Finished</span>;
+  return <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full shrink-0">—</span>;
 }
 
-function MetricCell({
-  icon: Icon,
-  label,
-  value,
-  color,
-  truncate,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  color: string;
-  truncate?: boolean;
+function MetricCell({ icon: Icon, label, value, color, truncate }: {
+  icon: React.ElementType; label: string; value: string; color: string; truncate?: boolean;
 }) {
   return (
     <div className="bg-slate-50 rounded-lg px-2.5 py-2 border border-slate-100">

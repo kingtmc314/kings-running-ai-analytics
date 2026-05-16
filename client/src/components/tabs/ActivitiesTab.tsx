@@ -1,36 +1,74 @@
 // =============================================================
 // Activities Tab — King's Running AI Analytics
-// Light Running Theme — clickable rows open full detail modal
+// Light Running Theme — clickable rows open detail modal
+// Edit (pencil) and Delete (trash) buttons per row
 // =============================================================
 import { useMemo, useState } from "react";
-import { Search, ChevronUp, ChevronDown, X, Footprints, Timer, Zap, Heart, Flame, Wind, Thermometer, Droplets, MapPin, StickyNote, Activity } from "lucide-react";
+import {
+  Search, ChevronUp, ChevronDown, Footprints, Timer, Zap, Heart,
+  Flame, Wind, Thermometer, Droplets, MapPin, StickyNote, Activity,
+  Pencil, Trash2,
+} from "lucide-react";
 import { useData } from "@/contexts/DataContext";
-import { parseDate, formatDateDisplay, secondsToHMS, paceToString, logToSeconds, getShoeName, getHRZone, RUN_TYPE_BADGE, RUN_TYPE_COLORS } from "@/lib/runningData";
+import {
+  parseDate, formatDateDisplay, secondsToHMS, paceToString,
+  logToSeconds, getShoeName, getHRZone, RUN_TYPE_BADGE, RUN_TYPE_COLORS,
+  RunLog,
+} from "@/lib/runningData";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
+import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import { updateRow, deleteRow } from "@/lib/sheetsApi";
 
 type SortKey = "Date" | "Distance" | "Time" | "Pace" | "HR";
 type SortDir = "asc" | "desc";
 
 const PAGE_SIZE = 30;
 
+const RUN_TYPES = [
+  "Easy", "Tempo", "Interval", "Long", "Race", "Recovery",
+  "Fartlek", "Sprint", "Trail", "Time Trial", "Theadmill (Gym)",
+];
+
+const ACTIVITY_FIELDS: FieldDef[] = [
+  { key: "Date", label: "Date", type: "date", required: true },
+  { key: "Distance (km)", label: "Distance (km)", type: "number", placeholder: "e.g. 10.5" },
+  { key: "Hour", label: "Hours", type: "number", placeholder: "0" },
+  { key: "Minutes", label: "Minutes", type: "number", placeholder: "0" },
+  { key: "Second", label: "Seconds", type: "number", placeholder: "0" },
+  { key: "Running Type", label: "Run Type", type: "select", options: RUN_TYPES },
+  { key: "Average Heart Rate", label: "Avg HR (bpm)", type: "number" },
+  { key: "Maximum Heart Rate", label: "Max HR (bpm)", type: "number" },
+  { key: "Running Shoes", label: "Shoe", type: "text" },
+  { key: "Average Cadence", label: "Avg Cadence", type: "number" },
+  { key: "Calories", label: "Calories", type: "number" },
+  { key: "Temperature", label: "Temperature (°C)", type: "number" },
+  { key: "Humidity", label: "Humidity (%)", type: "number" },
+  { key: "Wind Speed", label: "Wind Speed (km/h)", type: "number" },
+  { key: "Notes", label: "Notes", type: "textarea" },
+];
+
 // ─── Activity Detail Modal ────────────────────────────────────
 
-function ActivityDetailModal({ log, restingHR, onClose }: {
+function ActivityDetailModal({
+  log, restingHR, onClose, onEdit, onDelete,
+}: {
   log: Record<string, unknown> | null;
   restingHR: number;
   onClose: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   if (!log) return null;
 
   const dist = parseFloat(String(log["Distance (km)"] ?? "0")) || 0;
   const timeSec = (() => {
-    const t = String(log["Time"] || log["Duration"] || "");
-    if (!t) return 0;
-    const parts = t.split(":").map(Number);
-    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    if (parts.length === 2) return parts[0] * 60 + parts[1];
-    return 0;
+    const h = parseInt(String(log["Hour"] ?? "0")) || 0;
+    const m = parseInt(String(log["Minutes"] ?? "0")) || 0;
+    const s = parseFloat(String(log["Second"] ?? "0")) || 0;
+    return h * 3600 + m * 60 + s;
   })();
   const paceSec = dist > 0 && timeSec > 0 ? (timeSec / 60) / dist * 60 : 0;
   const avgHR = parseFloat(String(log["Average Heart Rate"] ?? "0")) || 0;
@@ -57,8 +95,6 @@ function ActivityDetailModal({ log, restingHR, onClose }: {
     { icon: Droplets, label: "Humidity", value: log["Humidity"] ? `${log["Humidity"]}%` : "—" },
     { icon: Wind, label: "Wind Speed", value: log["Wind Speed"] ? `${log["Wind Speed"]} km/h` : "—" },
     { icon: Zap, label: "Ground Contact", value: String(log["Ground Contact Time"] || "—") },
-    { icon: Zap, label: "Stride Length", value: String(log["Stride Length"] || "—") },
-    { icon: Zap, label: "Vertical Ratio", value: String(log["Vertical Ratio"] || "—") },
   ].filter((m) => m.value !== "—");
 
   return (
@@ -68,10 +104,7 @@ function ActivityDetailModal({ log, restingHR, onClose }: {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-semibold text-white"
-                  style={{ background: rtColor }}
-                >
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: rtColor }}>
                   {rt || "Run"}
                 </span>
                 <span className="text-xs text-muted-foreground">{formatDateDisplay(date)}</span>
@@ -79,6 +112,23 @@ function ActivityDetailModal({ log, restingHR, onClose }: {
               <DialogTitle className="font-display text-xl text-foreground">
                 {dist > 0 ? `${dist.toFixed(2)} km` : "Activity"} — {rt || "Run"}
               </DialogTitle>
+            </div>
+            {/* Edit / Delete action buttons */}
+            <div className="flex gap-1 shrink-0 mt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                title="Edit this activity"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                title="Delete this activity"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </DialogHeader>
@@ -91,7 +141,9 @@ function ActivityDetailModal({ log, restingHR, onClose }: {
             { label: "Avg Pace", value: paceSec > 0 ? paceToString(paceSec) : "—", unit: "/km" },
           ].map((s) => (
             <div key={s.label} className="bg-secondary rounded-xl p-3 text-center">
-              <p className="font-mono-metric text-2xl font-bold text-foreground">{s.value}<span className="text-sm font-normal text-muted-foreground ml-1">{s.unit}</span></p>
+              <p className="font-mono-metric text-2xl font-bold text-foreground">
+                {s.value}<span className="text-sm font-normal text-muted-foreground ml-1">{s.unit}</span>
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
             </div>
           ))}
@@ -149,15 +201,28 @@ function ActivityDetailModal({ log, restingHR, onClose }: {
 // ─── Main Component ───────────────────────────────────────────
 
 export default function ActivitiesTab() {
-  const { logs, latestRestingHR } = useData();
+  const { logs, setLogs, latestRestingHR, fetchFromGoogle } = useData();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [sortKey, setSortKey] = useState<SortKey>("Date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(1);
+
+  // Detail modal
   const [selectedLog, setSelectedLog] = useState<Record<string, unknown> | null>(null);
 
-  const runTypes = useMemo(() => ["All", ...Array.from(new Set(logs.map((l) => String((l as unknown as Record<string, unknown>)["Running Type"] || "")).filter(Boolean)))], [logs]);
+  // Edit modal
+  const [editLog, setEditLog] = useState<Record<string, unknown> | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Delete dialog
+  const [deleteLog, setDeleteLog] = useState<Record<string, unknown> | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const runTypes = useMemo(() => [
+    "All",
+    ...Array.from(new Set(logs.map((l) => String((l as unknown as Record<string, unknown>)["Running Type"] || "")).filter(Boolean))),
+  ], [logs]);
 
   const filtered = useMemo(() => {
     return logs.filter((l) => {
@@ -179,7 +244,7 @@ export default function ActivitiesTab() {
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
-      let av: number = 0, bv: number = 0;
+      let av = 0, bv = 0;
       const ra = a as unknown as Record<string, unknown>;
       const rb = b as unknown as Record<string, unknown>;
       if (sortKey === "Date") {
@@ -189,13 +254,12 @@ export default function ActivitiesTab() {
         av = parseFloat(String(ra["Distance (km)"] ?? "0")) || 0;
         bv = parseFloat(String(rb["Distance (km)"] ?? "0")) || 0;
       } else if (sortKey === "Time") {
-        av = logToSeconds(a);
-        bv = logToSeconds(b);
+        av = logToSeconds(a); bv = logToSeconds(b);
       } else if (sortKey === "Pace") {
-        const distA = parseFloat(String(ra["Distance (km)"] ?? "0")) || 0;
-        const distB = parseFloat(String(rb["Distance (km)"] ?? "0")) || 0;
-        av = distA > 0 ? logToSeconds(a) / distA : 0;
-        bv = distB > 0 ? logToSeconds(b) / distB : 0;
+        const dA = parseFloat(String(ra["Distance (km)"] ?? "0")) || 0;
+        const dB = parseFloat(String(rb["Distance (km)"] ?? "0")) || 0;
+        av = dA > 0 ? logToSeconds(a) / dA : 0;
+        bv = dB > 0 ? logToSeconds(b) / dB : 0;
       } else if (sortKey === "HR") {
         av = parseFloat(String(ra["Average Heart Rate"] ?? "0")) || 0;
         bv = parseFloat(String(rb["Average Heart Rate"] ?? "0")) || 0;
@@ -208,12 +272,55 @@ export default function ActivitiesTab() {
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    if (sortKey === key) setSortDir((d) => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("desc"); }
   };
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey === k ? (sortDir === "asc" ? <ChevronUp className="w-3 h-3 inline" /> : <ChevronDown className="w-3 h-3 inline" />) : null;
+
+  // ── Edit handler ──
+  async function handleEditSave(data: Record<string, string>) {
+    if (!editLog) return;
+    const row = editLog["_row"] as number;
+    setEditLoading(true);
+    const result = await updateRow("Running Log", row, data);
+    setEditLoading(false);
+    if (result.success) {
+      // Optimistic update in local state
+      setLogs((prev) => prev.map((l) => {
+        if ((l as unknown as Record<string, unknown>)["_row"] === row) {
+          return { ...l, ...data } as unknown as RunLog;
+        }
+        return l;
+      }));
+      toast.success("Activity updated successfully");
+      setEditLog(null);
+      setSelectedLog(null);
+      // Refresh from Google Sheets in background
+      fetchFromGoogle();
+    } else {
+      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    }
+  }
+
+  // ── Delete handler ──
+  async function handleDeleteConfirm() {
+    if (!deleteLog) return;
+    const row = deleteLog["_row"] as number;
+    setDeleteLoading(true);
+    const result = await deleteRow("Running Log", row);
+    setDeleteLoading(false);
+    if (result.success) {
+      setLogs((prev) => prev.filter((l) => (l as unknown as Record<string, unknown>)["_row"] !== row));
+      toast.success("Activity deleted");
+      setDeleteLog(null);
+      setSelectedLog(null);
+      fetchFromGoogle();
+    } else {
+      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -275,6 +382,7 @@ export default function ActivitiesTab() {
                 <th className="text-left px-4 py-3 text-muted-foreground font-semibold">Shoe</th>
                 <th className="text-right px-4 py-3 text-muted-foreground font-semibold">Cadence</th>
                 <th className="text-right px-4 py-3 text-muted-foreground font-semibold">Cal</th>
+                <th className="text-center px-4 py-3 text-muted-foreground font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -313,6 +421,25 @@ export default function ActivitiesTab() {
                     <td className="px-4 py-2.5 text-muted-foreground max-w-[100px] truncate">{getShoeName(l) || "—"}</td>
                     <td className="px-4 py-2.5 text-right font-mono-metric text-muted-foreground">{String(raw["Average Cadence"] ?? "—")}</td>
                     <td className="px-4 py-2.5 text-right font-mono-metric text-orange-500 font-semibold">{String(raw["Calories"] ?? "—")}</td>
+                    {/* Action buttons — stop propagation so row click doesn't fire */}
+                    <td className="px-4 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => setEditLog(raw)}
+                          className="p-1 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteLog(raw)}
+                          className="p-1 rounded hover:bg-red-50 text-red-400 hover:text-red-600 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -350,6 +477,29 @@ export default function ActivitiesTab() {
         log={selectedLog}
         restingHR={latestRestingHR}
         onClose={() => setSelectedLog(null)}
+        onEdit={() => { setEditLog(selectedLog); setSelectedLog(null); }}
+        onDelete={() => { setDeleteLog(selectedLog); setSelectedLog(null); }}
+      />
+
+      {/* Edit Modal */}
+      <EditRecordModal
+        open={!!editLog}
+        onClose={() => setEditLog(null)}
+        onSave={handleEditSave}
+        loading={editLoading}
+        title="Edit Activity"
+        fields={ACTIVITY_FIELDS}
+        initialValues={editLog || {}}
+      />
+
+      {/* Delete Confirm */}
+      <DeleteConfirmDialog
+        open={!!deleteLog}
+        onClose={() => setDeleteLog(null)}
+        onConfirm={handleDeleteConfirm}
+        loading={deleteLoading}
+        title="Delete Activity"
+        recordLabel={deleteLog ? `${formatDateDisplay(String(deleteLog["Date"] || ""))} — ${String(deleteLog["Running Type"] || "Run")} ${String(deleteLog["Distance (km)"] || "")} km` : undefined}
       />
     </div>
   );
