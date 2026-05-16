@@ -205,9 +205,11 @@ export function secondsToHMS(sec: number): string {
 
 export function paceToString(paceSec: number): string {
   if (!paceSec || paceSec <= 0) return "-:--";
-  const m = Math.floor(paceSec / 60);
-  const s = Math.round(paceSec % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
+  // paceSec is seconds per km — convert to mm:ss
+  const totalSec = Math.round(paceSec);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 export function logToSeconds(log: Partial<RunLog>): number {
@@ -288,6 +290,15 @@ export function scoreShoe(
 
 // ─── AI Race Prediction ───────────────────────────────────────
 
+export interface ShoeTableRow {
+  rank: number;
+  name: string;
+  score: number;
+  reason: string;
+  totalKm: number;
+  status: string;
+}
+
 export interface RacePrediction {
   race: Race;
   selectedShoe: string;
@@ -295,10 +306,13 @@ export interface RacePrediction {
   why: string;
   dataAnalysis: string;
   raceStrategy: string;
+  weatherNote: string;
+  bodyNote: string;
   predictedMin: string;
   predictedMax: string;
   paceMin: string;
   paceMax: string;
+  shoeTable: ShoeTableRow[];
 }
 
 export interface AIAnalysis {
@@ -415,60 +429,149 @@ export function generateAiAnalysis(
     })
     .sort((a, b) => (parseDate(a.日期)?.getTime() || 0) - (parseDate(b.日期)?.getTime() || 0));
 
+  // Build shoe km lookup from logs
+  const shoeKmMap: Record<string, number> = {};
+  logs.forEach((l) => {
+    const raw = l as unknown as Record<string, unknown>;
+    const sname = String(raw["Running Shoes"] || "").trim();
+    const d = parseFloat(String(raw["Distance (km)"] ?? "0")) || 0;
+    if (sname) shoeKmMap[sname] = (shoeKmMap[sname] || 0) + d;
+  });
+
+  // Recent weather averages from last 30 runs
+  const recentLogs = [...logs]
+    .sort((a, b) => (parseDate(b.Date)?.getTime() || 0) - (parseDate(a.Date)?.getTime() || 0))
+    .slice(0, 30);
+  const temps = recentLogs.map((l) => parseFloat(String((l as unknown as Record<string, unknown>)["Temperature"] ?? ""))).filter((v) => !isNaN(v));
+  const humids = recentLogs.map((l) => parseFloat(String((l as unknown as Record<string, unknown>)["Humidity"] ?? ""))).filter((v) => !isNaN(v));
+  const avgRecentTemp = temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+  const avgRecentHumidity = humids.length > 0 ? humids.reduce((a, b) => a + b, 0) / humids.length : null;
+
+  // Latest body fat % and BMI
+  const latestBodyFat = sortedBody.length > 0 ? parseFloat(String((sortedBody[0] as unknown as Record<string, unknown>)["Body Fat"] ?? (sortedBody[0] as unknown as Record<string, unknown>)["Body Fat %"] ?? "0")) : 0;
+  const latestBMI = sortedBody.length > 0 ? parseFloat(String((sortedBody[0] as unknown as Record<string, unknown>)["BMI"] ?? "0")) : 0;
+
+  // Recent 4-week training volume
+  const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 3600 * 1000);
+  const recentVolume = logs
+    .filter((l) => { const d = parseDate(l.Date); return d && d >= fourWeeksAgo; })
+    .reduce((sum, l) => sum + (parseFloat(String((l as unknown as Record<string, unknown>)["Distance (km)"] ?? "0")) || 0), 0);
+  const weeklyVolume = recentVolume / 4;
+
   const predictions: RacePrediction[] = upcomingRaces.map((race) => {
-    const dist = parseFloat(race["距離 (km)"] || "10");
-    const isXC = race.賽事.includes("越野") || race.賽事.includes("Trail") || race.賽事.toLowerCase().includes("trail");
-    const raceDateObj = parseDate(race.日期);
+    const dist = parseFloat(race["\u8ddd\u96e2 (km)"] || "10");
+    const isXC = race["\u8cfd\u4e8b"].includes("\u8d8a\u91ce") || race["\u8cfd\u4e8b"].includes("Trail") || race["\u8cfd\u4e8b"].toLowerCase().includes("trail");
+    const raceDateObj = parseDate(race["\u65e5\u671f"]);
     const raceMonth = raceDateObj ? raceDateObj.getMonth() + 1 : 1;
     const isHotWet = raceMonth >= 5 && raceMonth <= 9;
+    const isCoolDry = raceMonth <= 2 || raceMonth >= 11;
 
-    // Score shoes
-    const scored = inUseShoes
-      .map((name) => ({ name, score: scoreShoe(name, isXC, dist, isHotWet) }))
-      .sort((a, b) => b.score - a.score);
+    // Shoe scoring & table
+    const allShoesForTable = shoes.map((s) => {
+      const sname = s.Shoes || s["Shoes Name"] || "";
+      const score = scoreShoe(sname, isXC, dist, isHotWet);
+      const km = shoeKmMap[sname] || parseFloat(String((s as unknown as Record<string, unknown>)["TOTAL"] ?? "0")) || 0;
+      const sn = sname.toLowerCase();
+      let reason = "";
+      if (isXC) {
+        reason = sn.includes("speedgoat") || sn.includes("trail") ? "Trail-specific grip" : "Road shoe — not ideal for trail";
+      } else if (dist <= 10) {
+        if (sn.includes("adios pro") || sn.includes("metaspeed")) reason = "Carbon plate racer — optimal for short fast races";
+        else if (sn.includes("superblast") || sn.includes("nova blast")) reason = "High-cushion trainer — good for tempo effort";
+        else reason = "Versatile option for race day";
+      } else if (dist <= 21.1) {
+        if (sn.includes("adios pro") || sn.includes("metaspeed")) reason = "Carbon plate — excellent for HM pace";
+        else if (sn.includes("superblast")) reason = "Cushioned racer — strong HM choice";
+        else reason = "Suitable for half marathon distance";
+      } else {
+        if (sn.includes("superblast") || sn.includes("nimbus") || sn.includes("gel")) reason = "Max cushion — protects legs in final 10km";
+        else if (sn.includes("adios pro")) reason = "Carbon plate — aggressive but demanding over 42km";
+        else reason = "Adequate for marathon distance";
+      }
+      if (isHotWet && (sn.includes("metaspeed") || sn.includes("adios pro 4"))) reason += " · breathable upper for heat";
+      if (km > 600) reason += " · \u26a0 high mileage (" + km.toFixed(0) + "km)";
+      return { rank: 0, name: sname, score, reason, totalKm: km, status: s.Status || "" };
+    });
+    allShoesForTable.sort((a, b) => b.score - a.score);
+    allShoesForTable.forEach((r, i) => { r.rank = i + 1; });
+    const shoeTable = allShoesForTable;
 
-    const selectedShoe = scored[0]?.name || inUseShoes[0] || "Your race shoe";
-    const alternatives = scored.slice(1, 4).map((s) => s.name);
+    const scoredInUse = allShoesForTable.filter((s) => s.status === "In Use");
+    const selectedShoe = scoredInUse[0]?.name || inUseShoes[0] || "Your race shoe";
+    const alternatives = scoredInUse.slice(1, 4).map((s) => s.name);
 
+    // Why this shoe
     let why = "";
     const sn = selectedShoe.toLowerCase();
     if (isXC) {
-      why = `${selectedShoe} is chosen for its trail-specific grip and cushioning, essential for off-road terrain.`;
+      why = `${selectedShoe} is chosen for its trail-specific grip and cushioning, essential for off-road terrain in ${isHotWet ? "hot/humid" : "cool"} conditions.`;
     } else if (dist <= 10) {
       if (sn.includes("adios pro") || sn.includes("metaspeed")) {
-        why = `${selectedShoe} is chosen for its breathability and speed profile, perfect for ${isHotWet ? "hot/humid" : "cool"} conditions in month ${raceMonth} while maximizing your pace.`;
+        why = `${selectedShoe} is chosen for its carbon-plate energy return and breathability — perfect for ${isHotWet ? "hot/humid" : "cool"} month-${raceMonth} conditions while maximizing your pace.`;
       } else {
         why = `${selectedShoe} offers aggressive energy return. Your target pace requires mechanical advantage, and the ${isHotWet ? "warm" : "cool"} weather will ${isHotWet ? "require good breathability" : "prevent overheating"}.`;
       }
-    } else {
-      why = `For a runner tackling over ${dist <= 21.1 ? "2 hours" : "4 hours"}, the geometry and cushioning of the ${selectedShoe} provides superior leg-saving protection compared to a harsh racing flat.`;
-    }
-
-    let dataAnalysis = "";
-    const weightText = latestWeight > 0 ? `dropping from 90.6kg to ${latestWeight}kg and ` : "";
-    if (dist <= 10) {
-      dataAnalysis = `If you continue your current trajectory (${weightText}improving your tempo pace), a strong performance is highly realistic. Your recent bests show you have the lactate threshold to push hard.`;
     } else if (dist <= 21.1) {
-      dataAnalysis = `Your recent best equivalent 10k time projects well for this distance. With a proper taper, your aerobic base is strong enough to maintain a steady threshold pace.`;
+      why = `For a half marathon, the ${selectedShoe} balances cushioning and responsiveness to maintain threshold pace through the final 5km.`;
     } else {
-      dataAnalysis = `Your recent best equivalent 10k time projects well for this distance. With a proper taper, your aerobic base is strong enough to maintain a steady threshold pace.`;
+      why = `For a marathon, the ${selectedShoe}'s geometry and cushioning provides superior leg-saving protection — critical when fatigue sets in after km 30.`;
     }
 
+    // Data Analysis
+    const weightTrend = sortedBody.length >= 2
+      ? parseFloat(sortedBody[sortedBody.length - 1].Weight || "0") - parseFloat(sortedBody[0].Weight || "0")
+      : 0;
+    const weightTrendText = weightTrend < -1 ? `weight down ${Math.abs(weightTrend).toFixed(1)}kg — ` : weightTrend > 1 ? `weight up ${weightTrend.toFixed(1)}kg — ` : "";
+    let dataAnalysis = "";
+    if (dist <= 10) {
+      dataAnalysis = `Your 4-week training volume is ${weeklyVolume.toFixed(1)} km/week. ${weightTrendText}Your lactate threshold data from tempo runs supports a strong ${dist}km performance. Resting HR of ${latestRestingHR} bpm confirms good recovery.`;
+    } else if (dist <= 21.1) {
+      dataAnalysis = `Weekly volume of ${weeklyVolume.toFixed(1)} km/week provides a solid aerobic base for this distance. ${weightTrendText}Your Riegel-projected time from best 10K is reliable. Sleep score and resting HR indicate readiness.`;
+    } else {
+      dataAnalysis = `Marathon demands ${weeklyVolume.toFixed(1)} km/week base — ${weeklyVolume >= 50 ? "you're well-prepared" : "consider building volume before race day"}. ${weightTrendText}Body fat ${latestBodyFat > 0 ? latestBodyFat.toFixed(1) + "% and " : ""}resting HR ${latestRestingHR} bpm indicate ${latestRestingHR < 55 ? "excellent" : "good"} aerobic fitness.`;
+    }
+
+    // Weather Note
+    let weatherNote = "";
+    const expectedTemp = isHotWet ? (avgRecentTemp ?? 30) : (avgRecentTemp ?? 20);
+    const expectedHumidity = isHotWet ? (avgRecentHumidity ?? 80) : (avgRecentHumidity ?? 60);
+    if (isHotWet) {
+      weatherNote = `Race month ${raceMonth} is typically hot and humid (avg ~${expectedTemp.toFixed(0)}\u00b0C, ~${expectedHumidity.toFixed(0)}% humidity based on your recent logs). Expect pace 3\u20135% slower than cool-weather equivalent. Pre-hydrate aggressively, start 10\u201315 sec/km slower than target, and use cooling stations.`;
+    } else if (isCoolDry) {
+      weatherNote = `Race month ${raceMonth} offers ideal cool, dry conditions (typically 12\u201318\u00b0C). This is your best window for a PB attempt. Dress in light layers and aim for negative splits.`;
+    } else {
+      weatherNote = `Race month ${raceMonth} has moderate conditions. Monitor race-day forecast — if temp exceeds 25\u00b0C, adjust target pace by +5\u20138 sec/km. Your training logs show avg ${avgRecentTemp?.toFixed(1) ?? "\u2014"}\u00b0C recently.`;
+    }
+
+    // Body & Fitness Note
+    let bodyNote = "";
+    const sleepScore = latestSleep?.Score ? parseInt(latestSleep.Score) : 0;
+    const bodyBattery = latestSleep ? parseFloat(String((latestSleep as unknown as Record<string, unknown>)["Body Battery"] ?? "0")) : 0;
+    bodyNote = `Current resting HR: ${latestRestingHR} bpm${latestRestingHR < 50 ? " (elite aerobic fitness)" : latestRestingHR < 60 ? " (good fitness)" : " (moderate fitness)"}. `;
+    if (latestWeight > 0) bodyNote += `Weight: ${latestWeight}kg${latestBodyFat > 0 ? ", body fat " + latestBodyFat.toFixed(1) + "%" : ""}${latestBMI > 0 ? ", BMI " + latestBMI.toFixed(1) : ""}. `;
+    if (sleepScore > 0) bodyNote += `Latest sleep score: ${sleepScore}/100${sleepScore >= 80 ? " \u2014 excellent recovery" : sleepScore >= 60 ? " \u2014 adequate recovery" : " \u2014 consider extra rest before race"}. `;
+    if (bodyBattery > 0) bodyNote += `Body battery: ${bodyBattery}%${bodyBattery >= 70 ? " \u2014 fully charged" : bodyBattery >= 40 ? " \u2014 moderate energy" : " \u2014 low energy, prioritise sleep"}.`;
+
+    // Race Strategy
+    const heatPenalty = isHotWet ? " Add 5\u20138 sec/km to your target pace to account for heat." : "";
+    const roadNote = isXC ? " Technical trail sections require shortened stride and high cadence." : " Road surface allows full stride length.";
     let raceStrategy = "";
     if (isXC) {
-      raceStrategy = `Start conservatively on the first climb. Find your rhythm on technical sections. Push hard on any flat or downhill stretches in the final third.`;
+      raceStrategy = `Start conservatively on the first climb \u2014 heart rate will spike early on trail. Find your rhythm on technical sections with high cadence (180+ spm). Push hard on any flat or downhill stretches in the final third.${roadNote}${heatPenalty} Carry at least 500ml water if no aid stations within 5km.`;
     } else if (dist <= 10) {
-      raceStrategy = `Start at a controlled pace for the first 3km to let your legs warm up. From km 4 to ${Math.round(dist * 0.8)}, lock into your target race pace, and empty the tank on the last ${Math.round(dist * 0.2)}km.`;
+      raceStrategy = `Km 1\u20132: Hold back 10 sec/km slower than target \u2014 resist the crowd surge. Km 3\u2013${Math.round(dist * 0.7)}: Lock into race pace (${paceToString((best10kSec / 60) / 10 * 60)} min/km target).${heatPenalty} Final ${Math.round(dist * 0.3)}km: Empty the tank \u2014 HR can go to Z4/Z5. ${weeklyVolume >= 40 ? "Your training volume supports a strong finish." : "Conserve energy \u2014 your volume is building."}${roadNote}`;
     } else if (dist <= 21.1) {
-      raceStrategy = `This is an endurance test. Aim to hold a steady, conservative pace for the first ${Math.round(dist * 0.7)}km. The cushioning will keep your calves from cramping in the final ${Math.round(dist * 0.3)}km.`;
+      raceStrategy = `Km 1\u20133: Start easy, 15 sec/km slower than goal pace. Km 4\u2013${Math.round(dist * 0.65)}: Settle into threshold pace.${heatPenalty} Km ${Math.round(dist * 0.65)}\u2013${Math.round(dist * 0.85)}: Maintain \u2014 this is where most runners fade. Final ${Math.round(dist * 0.15)}km: Negative split if energy allows. Hydrate at every station \u2014 ${isHotWet ? "critical in heat" : "even in cool weather"}.${roadNote}`;
     } else {
-      raceStrategy = `This is an endurance test. Aim to hold a steady, conservative pace for the first ${Math.round(dist * 0.6)}km. The cushioning will keep your calves from cramping in the final ${Math.round(dist * 0.4)}km.`;
+      raceStrategy = `Km 1\u201310: Run 20 sec/km slower than goal pace \u2014 discipline here wins the race. Km 10\u201330: Steady aerobic effort, HR in Z2\u2013Z3.${heatPenalty} Km 30\u201335: The wall zone \u2014 shorten stride, maintain cadence. Final 7km: Dig deep \u2014 ${selectedShoe}'s cushioning protects your legs here. Fuel every 45 min, hydrate every station.${roadNote}`;
     }
 
-    // Prediction using Riegel formula: T2 = T1 × (D2/D1)^1.06
+    // Prediction (Riegel formula: T2 = T1 x (D2/D1)^1.06)
     let predictedSec = best10kSec * Math.pow(dist / 10, 1.06);
     if (isXC) predictedSec *= 1.2;
     if (isHotWet) predictedSec *= 1.03;
+    if (latestRestingHR < 50) predictedSec *= 0.98;
+    if (weeklyVolume < 30 && dist > 21) predictedSec *= 1.05;
 
     const minSec = predictedSec * 0.98;
     const maxSec = predictedSec * 1.02;
@@ -480,12 +583,15 @@ export function generateAiAnalysis(
       why,
       dataAnalysis,
       raceStrategy,
+      weatherNote,
+      bodyNote,
       predictedMin: secondsToHMS(minSec),
       predictedMax: secondsToHMS(maxSec),
-      paceMin: paceToString((minSec / 60) / dist),
-      paceMax: paceToString((maxSec / 60) / dist),
+      paceMin: paceToString((minSec / 60) / dist * 60),
+      paceMax: paceToString((maxSec / 60) / dist * 60),
+      shoeTable,
     };
   });
 
-  return { intro, predictions };
+    return { intro, predictions };
 }

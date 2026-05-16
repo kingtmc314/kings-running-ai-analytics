@@ -80,21 +80,57 @@ function ActivityDetailModal({
   const notes = String(log["Notes"] || "");
   const date = String(log["Date"] || "");
 
+  // Weather data
+  const temp = parseFloat(String(log["Temperature"] ?? "")) || null;
+  const humidity = parseFloat(String(log["Humidity"] ?? "")) || null;
+  const windSpeed = parseFloat(String(log["Wind Speed"] ?? "")) || null;
+  const hasWeather = temp !== null || humidity !== null || windSpeed !== null;
+
+  // Weather condition summary
+  const weatherSummary = (() => {
+    if (!hasWeather) return null;
+    const parts: string[] = [];
+    if (temp !== null) {
+      if (temp >= 32) parts.push("Extreme heat — high dehydration risk");
+      else if (temp >= 28) parts.push("Hot & challenging conditions");
+      else if (temp >= 22) parts.push("Warm — expect elevated HR");
+      else if (temp >= 15) parts.push("Ideal running temperature");
+      else if (temp >= 8) parts.push("Cool — good for performance");
+      else parts.push("Cold — warm-up thoroughly");
+    }
+    if (humidity !== null) {
+      if (humidity >= 85) parts.push("very high humidity (sweat cooling impaired)");
+      else if (humidity >= 70) parts.push("high humidity");
+      else if (humidity >= 50) parts.push("moderate humidity");
+      else parts.push("low humidity");
+    }
+    if (windSpeed !== null) {
+      if (windSpeed >= 30) parts.push("strong headwind/tailwind effect");
+      else if (windSpeed >= 15) parts.push("moderate wind");
+      else if (windSpeed >= 5) parts.push("light breeze");
+    }
+    return parts.join(" · ");
+  })();
+
+  // Weather severity colour
+  const weatherColor = (() => {
+    if (temp === null) return "bg-sky-50 border-sky-200 text-sky-800";
+    if (temp >= 32 || (temp >= 28 && (humidity ?? 0) >= 80)) return "bg-red-50 border-red-200 text-red-800";
+    if (temp >= 28 || (humidity ?? 0) >= 75) return "bg-orange-50 border-orange-200 text-orange-800";
+    if (temp >= 22) return "bg-amber-50 border-amber-200 text-amber-800";
+    return "bg-sky-50 border-sky-200 text-sky-800";
+  })();
+
   const metrics: { icon: React.ElementType; label: string; value: string; color?: string }[] = [
     { icon: Footprints, label: "Distance", value: dist > 0 ? `${dist.toFixed(2)} km` : "—" },
     { icon: Timer, label: "Time", value: timeSec > 0 ? secondsToHMS(timeSec) : "—" },
-    { icon: Zap, label: "Avg Pace", value: paceSec > 0 ? `${paceToString(paceSec)} /km` : "—" },
+    { icon: Zap, label: "Avg Pace", value: paceSec > 0 ? `${paceToString(paceSec)} min/km` : "—" },
     { icon: Heart, label: "Avg HR", value: avgHR > 0 ? `${avgHR} bpm` : "—", color: zone.color },
     { icon: Heart, label: "Max HR", value: maxHR > 0 ? `${maxHR} bpm` : "—" },
     { icon: Activity, label: "HR Zone", value: zone.zone, color: zone.color },
-    { icon: Zap, label: "Avg Cadence", value: String(log["Average Cadence"] || "—") },
-    { icon: Zap, label: "Max Cadence", value: String(log["Max Cadence"] || "—") },
-    { icon: Flame, label: "Calories", value: String(log["Calories"] || "—") },
+    { icon: Zap, label: "Avg Cadence", value: log["Average Cadence"] ? `${log["Average Cadence"]} spm` : "—" },
+    { icon: Flame, label: "Calories", value: log["Calories"] ? `${log["Calories"]} kcal` : "—" },
     { icon: MapPin, label: "Elevation Gain", value: log["Elevation Gain"] ? `${log["Elevation Gain"]} m` : "—" },
-    { icon: Thermometer, label: "Temperature", value: log["Temperature"] ? `${log["Temperature"]}°C` : "—" },
-    { icon: Droplets, label: "Humidity", value: log["Humidity"] ? `${log["Humidity"]}%` : "—" },
-    { icon: Wind, label: "Wind Speed", value: log["Wind Speed"] ? `${log["Wind Speed"]} km/h` : "—" },
-    { icon: Zap, label: "Ground Contact", value: String(log["Ground Contact Time"] || "—") },
   ].filter((m) => m.value !== "—");
 
   return (
@@ -165,6 +201,39 @@ function ActivityDetailModal({
           <div className="flex items-center gap-2 bg-secondary rounded-xl px-4 py-2.5 mt-1">
             <Footprints className="w-4 h-4 text-primary shrink-0" />
             <span className="text-sm text-foreground font-medium">{shoe}</span>
+          </div>
+        )}
+
+        {/* Weather Conditions Panel */}
+        {hasWeather && (
+          <div className={cn("rounded-xl border p-4 mt-1", weatherColor)}>
+            <div className="flex items-center gap-2 mb-3">
+              <Thermometer className="w-4 h-4 shrink-0" />
+              <p className="text-xs font-semibold uppercase tracking-wide">Weather Conditions</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-2">
+              {temp !== null && (
+                <div className="text-center">
+                  <p className="font-mono-metric text-xl font-bold">{temp}°C</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">Temperature</p>
+                </div>
+              )}
+              {humidity !== null && (
+                <div className="text-center">
+                  <p className="font-mono-metric text-xl font-bold">{humidity}%</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">Humidity</p>
+                </div>
+              )}
+              {windSpeed !== null && (
+                <div className="text-center">
+                  <p className="font-mono-metric text-xl font-bold">{windSpeed}</p>
+                  <p className="text-[10px] opacity-70 mt-0.5">Wind km/h</p>
+                </div>
+              )}
+            </div>
+            {weatherSummary && (
+              <p className="text-xs opacity-80 leading-relaxed border-t border-current/10 pt-2">{weatherSummary}</p>
+            )}
           </div>
         )}
 

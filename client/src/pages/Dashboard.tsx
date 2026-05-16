@@ -1,11 +1,12 @@
 // =============================================================
 // King's Running AI Analytics — Dashboard Shell
+// Responsive: sidebar on desktop (md+), top header nav on mobile
 // =============================================================
 import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, BarChart2, Brain, Trophy, Scale,
   Moon, Heart, Activity, ShoppingBag, PlusCircle, Menu, X,
-  RefreshCw, Zap, AlertTriangle,
+  RefreshCw, Zap, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
@@ -41,8 +42,15 @@ const NAV_ITEMS: { id: TabId; icon: React.ElementType; label: string }[] = [
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { syncStatus, fetchFromGoogle, processedShoes } = useData();
   const retirementAlertFired = useRef(false);
+
+  // Close mobile menu on tab change
+  const handleTabChange = (id: TabId) => {
+    setActiveTab(id);
+    setMobileMenuOpen(false);
+  };
 
   // Fire shoe retirement alerts once after data loads
   useEffect(() => {
@@ -67,7 +75,7 @@ export default function Dashboard() {
           duration: 8000,
           action: {
             label: "View Shoes",
-            onClick: () => setActiveTab("shoes"),
+            onClick: () => handleTabChange("shoes"),
           },
         }
       );
@@ -87,12 +95,17 @@ export default function Dashboard() {
     log:        <LogDataTab />,
   };
 
+  const activeLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? "";
+
   return (
     <div className="flex h-screen running-bg overflow-hidden">
-      {/* ── Sidebar ── */}
+
+      {/* ══════════════════════════════════════════════════════
+          DESKTOP SIDEBAR (hidden on mobile, visible on md+)
+      ══════════════════════════════════════════════════════ */}
       <aside
         className={cn(
-          "flex flex-col shrink-0 h-full transition-all duration-300 ease-out",
+          "hidden md:flex flex-col shrink-0 h-full transition-all duration-300 ease-out",
           "bg-sidebar border-r border-sidebar-border",
           sidebarOpen ? "w-56" : "w-16"
         )}
@@ -118,7 +131,7 @@ export default function Dashboard() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-all duration-150",
                   "hover:bg-sidebar-accent hover:text-white",
@@ -157,23 +170,24 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* ── Main content ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center gap-3 px-5 py-3 border-b border-border bg-card shrink-0 shadow-sm">
+      {/* ══════════════════════════════════════════════════════
+          MAIN CONTENT AREA
+      ══════════════════════════════════════════════════════ */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* ── DESKTOP top bar (md+) ── */}
+        <header className="hidden md:flex items-center gap-3 px-5 py-3 border-b border-border bg-card shrink-0 shadow-sm">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
             {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
-          <h1 className="font-display font-700 text-base text-foreground">
-            {NAV_ITEMS.find((n) => n.id === activeTab)?.label}
-          </h1>
+          <h1 className="font-display font-700 text-base text-foreground">{activeLabel}</h1>
           <div className="ml-auto flex items-center gap-2">
             {syncStatus === "success" && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              <span className="text-xs text-emerald-500 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
                 Live
               </span>
             )}
@@ -183,8 +197,86 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* ── MOBILE header (< md) ── */}
+        <header className="md:hidden shrink-0 bg-sidebar border-b border-sidebar-border shadow-sm">
+          {/* Top bar: logo + sync status + hamburger */}
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <Zap className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-display font-700 text-sm text-sidebar-foreground leading-tight truncate">King's Running</p>
+              <p className="text-[9px] text-muted-foreground leading-tight">AI Analytics</p>
+            </div>
+            {/* Sync indicator */}
+            {syncStatus === "success" && (
+              <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                Live
+              </span>
+            )}
+            {syncStatus === "loading" && (
+              <RefreshCw className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
+            )}
+            {/* Hamburger / close */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-sidebar-accent transition-colors shrink-0"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {/* Current page label + dropdown hint */}
+          <div
+            className="flex items-center justify-between px-4 pb-2 cursor-pointer"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <span className="text-xs font-semibold text-primary">{activeLabel}</span>
+            <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", mobileMenuOpen && "rotate-180")} />
+          </div>
+
+          {/* Dropdown nav menu */}
+          {mobileMenuOpen && (
+            <nav className="border-t border-sidebar-border bg-sidebar pb-2 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-1 p-2">
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabChange(item.id)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                        isActive
+                          ? "bg-primary/20 text-primary"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-white"
+                      )}
+                    >
+                      <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "")} />
+                      <span className="truncate text-xs">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Sync button in mobile menu */}
+              <div className="px-2 pt-1 border-t border-sidebar-border mt-1">
+                <button
+                  onClick={() => { fetchFromGoogle(); setMobileMenuOpen(false); }}
+                  disabled={syncStatus === "loading"}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-sidebar-accent hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all disabled:opacity-60"
+                >
+                  <RefreshCw className={cn("w-3.5 h-3.5", syncStatus === "loading" && "animate-spin")} />
+                  {syncStatus === "loading" ? "Syncing…" : "Sync Data"}
+                </button>
+              </div>
+            </nav>
+          )}
+        </header>
+
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-5">
+        <main className="flex-1 overflow-y-auto p-4 md:p-5">
           <div className="animate-fade-up">
             {TAB_COMPONENTS[activeTab]}
           </div>
