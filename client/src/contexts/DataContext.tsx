@@ -41,7 +41,7 @@ interface DataContextValue {
   setHeartRates: React.Dispatch<React.SetStateAction<HeartRateRecord[]>>;
 
   // Computed helpers
-  processedShoes: (Shoe & { totalDist: number; usageCount: number; parsedPrice: number })[];
+  processedShoes: (Shoe & { totalDist: number; usageCount: number; parsedPrice: number; costPerKm: number; shoesName: string })[];
   processedRacesList: (Race & { timeSec: number; paceSec: number; logData: Partial<RunLog> })[];
   raceStats: {
     totalRaces: number;
@@ -115,16 +115,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [syncStatus, generateAI]);
 
   // Processed shoes
+  // Match by "Shoes Name" (full brand+name string) which is what Running Log uses in "Running Shoes".
+  // Also use the sheet's pre-computed TOTAL (km) and COST (cost/km) fields when available.
   const processedShoes = useMemo(() => {
     return [...shoes].map((shoe) => {
-      const raw = shoe as unknown as Record<string, string>;
-      const name = raw["Shoes"] || raw["Shoes Name"] || "";
-      const totalDist = logs
-        .filter((l) => getShoeName(l) === name)
-        .reduce((acc, l) => acc + (parseFloat(String((l as unknown as Record<string, string>)["Distance (km)"] || "0")) || 0), 0);
-      const usageCount = logs.filter((l) => getShoeName(l) === name).length;
-      const parsedPrice = parsePrice(raw["Shoes Price"]);
-      return { ...shoe, totalDist, usageCount, parsedPrice };
+      const raw = shoe as unknown as Record<string, unknown>;
+      // "Shoes Name" is the full "Brand Model Color" string used in the log
+      const shoesName = String(raw["Shoes Name"] || raw["Shoes"] || "");
+      // Use sheet-computed TOTAL if present, otherwise compute from logs
+      const sheetTotal = parseFloat(String(raw["TOTAL"] ?? ""));
+      const totalDist = !isNaN(sheetTotal) && sheetTotal > 0
+        ? sheetTotal
+        : logs
+            .filter((l) => getShoeName(l) === shoesName)
+            .reduce((acc, l) => acc + (parseFloat(String((l as unknown as Record<string, unknown>)["Distance (km)"] ?? "0")) || 0), 0);
+      const usageCount = logs.filter((l) => getShoeName(l) === shoesName).length;
+      const parsedPrice = parsePrice(String(raw["Shoes Price"] ?? ""));
+      // Use sheet-computed COST if present
+      const sheetCost = parseFloat(String(raw["COST"] ?? ""));
+      const costPerKm = !isNaN(sheetCost) && sheetCost > 0
+        ? sheetCost
+        : totalDist > 0 && parsedPrice > 0 ? parsedPrice / totalDist : 0;
+      return { ...shoe, totalDist, usageCount, parsedPrice, costPerKm, shoesName };
     }).sort((a, b) => {
       const aRaw = a as unknown as Record<string, string>;
       const bRaw = b as unknown as Record<string, string>;
