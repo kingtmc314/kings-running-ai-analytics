@@ -47,6 +47,10 @@ const RUNNING_FIELDS: FieldDef[] = [
   { key: "Running Shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name" },
   { key: "Calories", label: "Calories", type: "number", placeholder: "e.g. 650" },
   { key: "Average Cadence", label: "Avg Cadence (spm)", type: "number", placeholder: "e.g. 172" },
+  { key: "Max Cadence", label: "Max Cadence (spm)", type: "number", placeholder: "e.g. 185" },
+  { key: "Avg Stride Length (m)", label: "Avg Stride Length (m)", type: "number", placeholder: "e.g. 1.25" },
+  { key: "Avg Vertical Ratio", label: "Avg Vertical Ratio", type: "number", placeholder: "e.g. 8.5" },
+  { key: "Vertical Oscillation (cm)", label: "Vertical Oscillation (cm)", type: "number", placeholder: "e.g. 9.2" },
   { key: "Avg Ground Contact Time (ms)", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220" },
   { key: "Average Pace", label: "Avg Pace (min/km)", type: "text", placeholder: "e.g. 5:30" },
   { key: "Temperature", label: "Temperature (°C)", type: "number", placeholder: "e.g. 28" },
@@ -366,7 +370,7 @@ function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Date", "Type", "Dist (km)", "H", "M", "S", "Avg HR", "Max HR", "Shoe", "Calories", "Avg Cadence"].map((h) => (
+          {["Date", "Type", "Dist (km)", "H", "M", "S", "Avg HR", "Max HR", "Shoe", "Calories", "Avg Cadence", "Max Cadence", "Stride (m)", "V. Ratio", "V. Osc (cm)"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -385,6 +389,10 @@ function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
             <td className="px-3 py-2 text-slate-600 whitespace-nowrap max-w-[120px] truncate">{String(r["Running Shoes"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Calories"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Average Cadence"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Max Cadence"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Avg Stride Length (m)"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Avg Vertical Ratio"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Vertical Oscillation (cm)"] ?? "")}</td>
           </tr>
         ))}
       </tbody>
