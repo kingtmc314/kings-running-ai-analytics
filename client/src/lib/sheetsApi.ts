@@ -46,6 +46,32 @@ export async function updateRow(
 }
 
 /**
+ * Append a new row to a Google Sheet.
+ * @param sheet  Sheet name (e.g. "Running Log")
+ * @param data   Key-value pairs matching the sheet column headers
+ */
+export async function addRow(
+  sheet: string,
+  data: Record<string, unknown>
+): Promise<SheetWriteResult> {
+  try {
+    const url = getExecUrl();
+    const body = JSON.stringify({ action: "add", sheet, data });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (json.status === "success" || json.result === "success") return { success: true };
+    if (json.error) return { success: false, error: String(json.error) };
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+/**
  * Delete a specific row from a Google Sheet.
  * @param sheet  Sheet name
  * @param row    1-based row number (_row field on the record)

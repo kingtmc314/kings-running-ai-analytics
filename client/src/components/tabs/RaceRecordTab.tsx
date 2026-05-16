@@ -359,7 +359,7 @@ export default function RaceRecordTab() {
         onConfirm={handleDeleteConfirm}
         loading={deleteLoading}
         title="Delete Race"
-        recordLabel={deleteRace ? String(deleteRace["賽事"] || "this race") : undefined}
+        recordLabel={deleteRace ? String(deleteRace?.["賽事"] ?? deleteRace?.["race"] ?? deleteRace?.["Race"] ?? deleteRace?.["Race Name"] ?? "this race") : undefined}
       />
     </div>
   );
