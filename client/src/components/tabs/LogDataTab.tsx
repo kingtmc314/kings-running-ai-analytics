@@ -1,6 +1,7 @@
 // =============================================================
 // Log Data Tab — King's Running AI Analytics
 // Raw data viewer + Add Record forms for all six sheets
+// Field keys MUST match exact Google Sheet column names from API
 // =============================================================
 import { useState } from "react";
 import { RefreshCw, Database, Plus, X, Save, Loader2 } from "lucide-react";
@@ -31,7 +32,8 @@ const SHEETS: { id: Sheet; label: string }[] = [
   { id: "hr",      label: "Heart Rate" },
 ];
 
-// ─── Field definitions for each sheet ────────────────────────
+// ─── Field definitions — EXACT Google Sheet column names ──────
+// Running Log: Date, Running Type, Running Shoes, Distance (km), Hour, Minutes, Second, Average Pace, Best Pace, Average Heart Rate, Maximum Heart Rate, Average Cadence, Max Cadence, Avg Stride Length (m), Avg Vertical Ratio, Vertical Oscillation (cm), Avg Ground Contact Time (ms), Calories, Temperature, Humidity, Wind Speed, Apparent Temp, Status
 const RUNNING_FIELDS: FieldDef[] = [
   { key: "Date", label: "Date", type: "date", required: true },
   { key: "Running Type", label: "Running Type", type: "select", required: true,
@@ -45,16 +47,16 @@ const RUNNING_FIELDS: FieldDef[] = [
   { key: "Running Shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name" },
   { key: "Calories", label: "Calories", type: "number", placeholder: "e.g. 650" },
   { key: "Average Cadence", label: "Avg Cadence (spm)", type: "number", placeholder: "e.g. 172" },
-  { key: "Ground Contact Time", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220" },
+  { key: "Avg Ground Contact Time (ms)", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220" },
   { key: "Average Pace", label: "Avg Pace (min/km)", type: "text", placeholder: "e.g. 5:30" },
   { key: "Temperature", label: "Temperature (°C)", type: "number", placeholder: "e.g. 28" },
   { key: "Humidity", label: "Humidity (%)", type: "number", placeholder: "e.g. 80" },
   { key: "Wind Speed", label: "Wind Speed (km/h)", type: "number", placeholder: "e.g. 12" },
-  { key: "Notes", label: "Notes", type: "text", placeholder: "Optional notes" },
 ];
 
+// Shoes: Shoes, Shoes Brand, Shoes Price, Purchase Date, First Use, Retired Date, ItemPhoto, Shoes Name, Status, TOTAL, COST
 const SHOES_FIELDS: FieldDef[] = [
-  { key: "Shoes Name", label: "Shoes Name (Brand + Model)", type: "text", required: true, placeholder: "e.g. Adidas Adizero Adios Pro 4 White" },
+  { key: "Shoes", label: "Shoes Name (Brand + Model)", type: "text", required: true, placeholder: "e.g. Adidas Adizero Adios Pro 4 White" },
   { key: "Shoes Brand", label: "Brand", type: "text", required: true, placeholder: "e.g. Adidas" },
   { key: "Status", label: "Status", type: "select", required: true, options: ["In Use", "Not Yet Opened", "Retired"] },
   { key: "Shoes Price", label: "Price (HKD)", type: "number", placeholder: "e.g. 1800" },
@@ -64,18 +66,21 @@ const SHOES_FIELDS: FieldDef[] = [
   { key: "ItemPhoto", label: "Photo URL", type: "text", placeholder: "https://..." },
 ];
 
+// Race: 賽事, 日期, 距離 (km), Reg, BIB No, 完成, PB?, Overall Place, Gender Group Place, Age Group Place
 const RACES_FIELDS: FieldDef[] = [
   { key: "賽事", label: "Race Name", type: "text", required: true, placeholder: "e.g. HK 10K 2026" },
   { key: "日期", label: "Date", type: "date", required: true },
   { key: "距離 (km)", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10" },
-  { key: "完成", label: "Completed?", type: "select", options: ["TRUE", "FALSE"] },
+  { key: "完成", label: "Completed?", type: "select", options: ["true", "false"] },
   { key: "Overall Place", label: "Overall Place", type: "text", placeholder: "e.g. 45" },
   { key: "Age Group Place", label: "Age Group Place", type: "text", placeholder: "e.g. 12" },
 ];
 
+// Body: Date, Height, Weight, BMI, BodyFat, FatMass, FFM, MuscleMass, SMM, Protein, BoneMass, BodyWater, BodyWaterPercent, BMR, VisceralFat
 const BODY_FIELDS: FieldDef[] = [
   { key: "Date", label: "Date", type: "date", required: true },
   { key: "Weight", label: "Weight (kg)", type: "number", required: true, placeholder: "e.g. 72.5" },
+  { key: "Height", label: "Height (cm)", type: "number", placeholder: "e.g. 180" },
   { key: "BMI", label: "BMI", type: "number", placeholder: "e.g. 22.4" },
   { key: "BodyFat", label: "Body Fat (%)", type: "number", placeholder: "e.g. 18.5" },
   { key: "FatMass", label: "Fat Mass (kg)", type: "number", placeholder: "e.g. 13.2" },
@@ -84,17 +89,18 @@ const BODY_FIELDS: FieldDef[] = [
   { key: "VisceralFat", label: "Visceral Fat", type: "number", placeholder: "e.g. 8" },
 ];
 
+// Sleep: Date, Score, Resting Heart Rate, Body Battery, Pulse Ox, Respiration, Skin Temp Change, HRV Status, Quality, Duration, Sleep Need, Bedtime, Wake Time
 const SLEEP_FIELDS: FieldDef[] = [
   { key: "Date", label: "Date", type: "date", required: true },
   { key: "Score", label: "Sleep Score", type: "number", required: true, placeholder: "0–100" },
   { key: "Resting Heart Rate", label: "Resting HR (bpm)", type: "number", placeholder: "e.g. 48" },
   { key: "Body Battery", label: "Body Battery", type: "number", placeholder: "0–100" },
-  { key: "Pulse Ox", label: "Pulse Ox (%)", type: "number", placeholder: "e.g. 97" },
+  { key: "Pulse Ox", label: "Pulse Ox (%)", type: "text", placeholder: "e.g. 97" },
   { key: "Respiration", label: "Respiration (brpm)", type: "number", placeholder: "e.g. 14" },
-  { key: "Stress", label: "Stress", type: "number", placeholder: "0–100" },
   { key: "Quality", label: "Quality", type: "select", options: ["Excellent","Good","Fair","Poor"] },
 ];
 
+// Heart Rate: Date, Resting, High
 const HR_FIELDS: FieldDef[] = [
   { key: "Date", label: "Date", type: "date", required: true },
   { key: "Resting", label: "Resting HR (bpm)", type: "number", required: true, placeholder: "e.g. 48" },
@@ -151,7 +157,15 @@ function AddRecordModal({
     setSaving(true);
     const data: Record<string, unknown> = {};
     fields.forEach((f) => {
-      if (form[f.key] !== "") data[f.key] = form[f.key];
+      if (form[f.key] !== "") {
+        // Convert number fields to numbers
+        if (f.type === "number") {
+          const num = parseFloat(form[f.key]);
+          data[f.key] = isNaN(num) ? form[f.key] : num;
+        } else {
+          data[f.key] = form[f.key];
+        }
+      }
     });
     const result = await addRow(SHEET_NAMES[sheet], data);
     setSaving(false);
@@ -184,7 +198,7 @@ function AddRecordModal({
         <div className="overflow-y-auto flex-1 px-6 py-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {fields.map((f) => (
-              <div key={f.key} className={cn("flex flex-col gap-1.5", f.key === "Notes" && "sm:col-span-2")}>
+              <div key={f.key} className={cn("flex flex-col gap-1.5")}>
                 <label className="text-sm font-medium text-slate-700">
                   {f.label}
                   {f.required && <span className="text-red-400 ml-1">*</span>}
@@ -370,7 +384,7 @@ function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
       <tbody>
         {shoes.map((r, i) => (
           <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td className="px-3 py-2 text-slate-700 whitespace-nowrap max-w-[180px] truncate">{String(r["Shoes Name"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-700 whitespace-nowrap max-w-[180px] truncate">{String(r["Shoes"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-700">{String(r["Shoes Brand"] ?? "")}</td>
             <td className="px-3 py-2">
               <span className={cn(
@@ -424,7 +438,7 @@ function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) 
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Date", "Weight (kg)", "BMI", "Body Fat (%)", "Fat Mass (kg)", "Muscle Mass (kg)", "BMR", "Visceral Fat"].map((h) => (
+          {["Date", "Weight (kg)", "Height (cm)", "BMI", "Body Fat (%)", "Fat Mass (kg)", "Muscle Mass (kg)", "BMR", "Visceral Fat"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -434,6 +448,7 @@ function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) 
           <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{formatDateDisplay(String(r["Date"] ?? ""))}</td>
             <td className="px-3 py-2 text-slate-700">{String(r["Weight"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Height"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["BMI"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["BodyFat"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["FatMass"] ?? "")}</td>
@@ -452,7 +467,7 @@ function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Date", "Score", "Resting HR", "Body Battery", "Pulse Ox", "Respiration", "Stress", "Quality"].map((h) => (
+          {["Date", "Score", "Resting HR", "Body Battery", "Pulse Ox", "Respiration", "Quality"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -466,7 +481,6 @@ function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }
             <td className="px-3 py-2 text-slate-500">{String(r["Body Battery"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Pulse Ox"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Respiration"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String(r["Stress"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Quality"] ?? "")}</td>
           </tr>
         ))}
