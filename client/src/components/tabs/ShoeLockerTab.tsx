@@ -387,15 +387,17 @@ export default function ShoeLockerTab() {
               <div
                 key={i}
                 className={cn(
-                  "glass-card rounded-xl border overflow-hidden transition-all cursor-pointer",
+                  "glass-card rounded-xl border overflow-hidden transition-all",
                   "hover:shadow-lg hover:-translate-y-1 hover:border-primary/40",
                   isWarning ? "border-orange-300" : "border-border"
                 )}
-                onClick={() => setSelectedShoe({ name: fullName, photo: photoUrl })}
-                title="Click to view all activities with this shoe"
               >
-                {/* ── Photo section ─────────────────────────── */}
-                <div className="relative h-44 bg-secondary/50 overflow-hidden">
+                {/* ── Photo section — click to view activities ── */}
+                <div
+                  className="relative h-44 bg-secondary/50 overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedShoe({ name: fullName, photo: photoUrl })}
+                  title="Click to view all activities with this shoe"
+                >
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -411,30 +413,14 @@ export default function ShoeLockerTab() {
                     </div>
                   )}
 
-                  {/* Status badge + edit/delete overlay */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                  {/* Status badge top-left */}
+                  <div className="absolute top-2 left-2">
                     <span className={cn(
                       "text-[10px] px-2 py-0.5 rounded-full border font-medium",
                       STATUS_COLORS[status] || "bg-slate-100 text-slate-500 border-slate-300"
                     )}>
                       {status}
                     </span>
-                    {/* Edit button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setEditShoe(raw); }}
-                      className="p-1 rounded-lg bg-white/80 hover:bg-white text-blue-500 hover:text-blue-700 shadow transition-colors"
-                      title="Edit shoe"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                    {/* Delete button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteShoe(raw); }}
-                      className="p-1 rounded-lg bg-white/80 hover:bg-white text-red-400 hover:text-red-600 shadow transition-colors"
-                      title="Delete shoe"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
                   </div>
 
                   {/* Photo link — stop propagation so it doesn't open the popup */}
@@ -467,7 +453,7 @@ export default function ShoeLockerTab() {
                 </div>
 
                 {/* ── Card body ─────────────────────────────── */}
-                <div className="p-4 space-y-3">
+                <div className="p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
                   {/* Name + brand */}
                   <div>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{brand}</p>
@@ -510,6 +496,28 @@ export default function ShoeLockerTab() {
                       value={shoe.costPerKm > 0 ? `$${shoe.costPerKm.toFixed(2)}` : "—"}
                       color="text-emerald-600"
                     />
+                  </div>
+
+                  {/* Edit / Delete actions */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditShoe(raw); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors"
+                    >
+                      <Pencil className="w-3 h-3" /> Edit
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteShoe(raw); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelectedShoe({ name: fullName, photo: photoUrl }); }}
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
+                    >
+                      <Activity className="w-3 h-3" /> {shoe.usageCount} runs
+                    </button>
                   </div>
 
                   {/* Dates */}
