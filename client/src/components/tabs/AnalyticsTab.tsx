@@ -9,9 +9,9 @@ import { parseDate, getShoeName, RUN_TYPE_COLORS } from "@/lib/runningData";
 import { cn } from "@/lib/utils";
 import {
   ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Cell,
+  ResponsiveContainer, Legend, Cell, LineChart, Line, ReferenceLine,
 } from "recharts";
-import { ChevronDown, BarChart3, RotateCcw } from "lucide-react";
+import { ChevronDown, BarChart3, RotateCcw, TrendingUp } from "lucide-react";
 
 type AnalyticsView = "monthly" | "yearly" | "shoes" | "daily";
 
@@ -394,6 +394,9 @@ export default function AnalyticsTab() {
         )}
       </div>
 
+      {/* ── Training Load: Weekly Volume + 4-week Rolling Avg ── */}
+      <TrainingLoadChart logs={filteredLogs} />
+
       {/* ── Run type breakdown mini-cards ───────────────────── */}
       {usedTypes.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -418,6 +421,151 @@ export default function AnalyticsTab() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Training Load Chart ──────────────────────────────────────
+
+type RunLog = { Date: string; [key: string]: unknown };
+
+function TrainingLoadChart({ logs }: { logs: RunLog[] }) {
+  const weeklyData = useMemo(() => {
+    if (logs.length === 0) return [];
+
+    const weekMap: Record<string, number> = {};
+    logs.forEach((l) => {
+      const d = parseDate(l.Date);
+      if (!d) return;
+      const raw = l as unknown as Record<string, unknown>;
+      const dist = parseFloat(String(raw["Distance (km)"] ?? "0")) || 0;
+      const day = d.getDay();
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - ((day + 6) % 7));
+      const yr = monday.getFullYear();
+      const startOfYear = new Date(yr, 0, 1);
+      const weekNum = Math.ceil(
+        ((monday.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7
+      );
+      const key = `${yr}-W${String(weekNum).padStart(2, "0")}`;
+      weekMap[key] = (weekMap[key] || 0) + dist;
+    });
+
+    const sorted = Object.entries(weekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, km]) => ({ week, km: parseFloat(km.toFixed(1)), avg4: 0 }));
+
+    for (let i = 0; i < sorted.length; i++) {
+      const slice = sorted.slice(Math.max(0, i - 3), i + 1);
+      sorted[i].avg4 = parseFloat(
+        (slice.reduce((s, x) => s + x.km, 0) / slice.length).toFixed(1)
+      );
+    }
+
+    return sorted.slice(-52);
+  }, [logs]);
+
+  if (weeklyData.length === 0) return null;
+
+  const maxKm = Math.max(...weeklyData.map((w) => w.km));
+  const avgKm = weeklyData.reduce((s, w) => s + w.km, 0) / weeklyData.length;
+
+  return (
+    <div className="glass-card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-emerald-400" />
+          <h2 className="font-display font-600 text-white text-sm">Training Load — Weekly Volume</h2>
+          <span className="text-[10px] text-muted-foreground ml-1">(last 52 weeks)</span>
+        </div>
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="text-right">
+            <p className="font-mono-metric text-emerald-400 text-xs font-600">{avgKm.toFixed(1)} km</p>
+            <p className="text-[9px] text-muted-foreground">Avg/Week</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono-metric text-amber-400 text-xs font-600">{maxKm.toFixed(1)} km</p>
+            <p className="text-[9px] text-muted-foreground">Peak Week</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 mb-3 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-2 rounded-sm bg-blue-500/60 inline-block" />
+          Weekly km
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-0 border-t-2 border-dashed border-amber-400 inline-block" />
+          4-week rolling avg
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-5 h-0 border-t border-dashed border-slate-500/50 inline-block" />
+          Overall avg ({avgKm.toFixed(0)} km)
+        </span>
+      </div>
+
+      <ResponsiveContainer width="100%" height={240}>
+        <ComposedChart data={weeklyData} margin={{ top: 5, right: 30, left: -5, bottom: 30 }}>
+          <defs>
+            <linearGradient id="weekGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.5} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <XAxis
+            dataKey="week"
+            tick={{ fill: "#64748b", fontSize: 9 }}
+            tickLine={false}
+            axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+            angle={-35}
+            textAnchor="end"
+            interval={Math.floor(weeklyData.length / 12)}
+          />
+          <YAxis
+            tick={{ fill: "#64748b", fontSize: 10 }}
+            tickLine={false}
+            axisLine={false}
+            label={{ value: "km", angle: -90, position: "insideLeft", fill: "#475569", fontSize: 10, dy: 20 }}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "#1e293b",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+            labelStyle={{ color: "#94a3b8" }}
+            formatter={(value: number, name: string) => [
+              `${value.toFixed(1)} km`,
+              name === "km" ? "Weekly Volume" : "4-wk Rolling Avg",
+            ]}
+          />
+          <ReferenceLine
+            y={avgKm}
+            stroke="rgba(100,116,139,0.4)"
+            strokeDasharray="4 4"
+            label={{ value: `Avg ${avgKm.toFixed(0)}`, fill: "#64748b", fontSize: 9, position: "right" }}
+          />
+          <Bar
+            dataKey="km"
+            fill="url(#weekGrad)"
+            stroke="#3b82f6"
+            strokeWidth={0.5}
+            maxBarSize={18}
+            radius={[3, 3, 0, 0]}
+          />
+          <Line
+            type="monotone"
+            dataKey="avg4"
+            stroke="#f59e0b"
+            strokeWidth={2}
+            dot={false}
+            strokeDasharray="5 3"
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
     </div>
   );
 }

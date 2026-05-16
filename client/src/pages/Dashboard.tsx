@@ -1,14 +1,15 @@
 // =============================================================
 // King's Running AI Analytics — Dashboard Shell
 // =============================================================
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard, BarChart2, Brain, Trophy, Scale,
   Moon, Heart, Activity, ShoppingBag, PlusCircle, Menu, X,
-  RefreshCw, Zap,
+  RefreshCw, Zap, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
+import { toast } from "sonner";
 import OverviewTab from "@/components/tabs/OverviewTab";
 import AnalyticsTab from "@/components/tabs/AnalyticsTab";
 import AICoachTab from "@/components/tabs/AICoachTab";
@@ -40,7 +41,38 @@ const NAV_ITEMS: { id: TabId; icon: React.ElementType; label: string }[] = [
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { syncStatus, fetchFromGoogle } = useData();
+  const { syncStatus, fetchFromGoogle, processedShoes } = useData();
+  const retirementAlertFired = useRef(false);
+
+  // Fire shoe retirement alerts once after data loads
+  useEffect(() => {
+    if (syncStatus !== "success" || retirementAlertFired.current) return;
+    if (!processedShoes || processedShoes.length === 0) return;
+    retirementAlertFired.current = true;
+
+    const nearRetirement = processedShoes.filter(
+      (s) => s.Status === "In Use" && s.totalDist >= 700
+    );
+
+    if (nearRetirement.length === 0) return;
+
+    nearRetirement.forEach((shoe) => {
+      const name = shoe["Shoes Name"] || shoe.Shoes || "Unknown Shoe";
+      const dist = shoe.totalDist;
+      const pct = Math.round((dist / 800) * 100);
+      toast.warning(
+        `⚠️ Shoe nearing retirement: ${name}`,
+        {
+          description: `${dist.toFixed(0)} km used (${pct}% of 800 km limit). Consider retiring this pair soon.`,
+          duration: 8000,
+          action: {
+            label: "View Shoes",
+            onClick: () => setActiveTab("shoes"),
+          },
+        }
+      );
+    });
+  }, [syncStatus, processedShoes]);
 
   const TAB_COMPONENTS: Record<TabId, React.ReactNode> = {
     overview:   <OverviewTab />,
