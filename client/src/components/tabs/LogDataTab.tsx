@@ -135,7 +135,17 @@ function AddRecordModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { shoes } = useData();
   const fields = SHEET_FIELDS[sheet];
+  
+  // Get non-retired shoes for Running Shoes dropdown (only for running sheet)
+  const availableShoes = sheet === "running" 
+    ? shoes
+        .filter((s) => String(s["Status"] ?? "") !== "Retired")
+        .map((s) => String(s["Shoes Name"] ?? s["Shoes"] ?? ""))
+        .filter(Boolean)
+    : [];
+  
   const [form, setForm] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     fields.forEach((f) => {
@@ -203,7 +213,18 @@ function AddRecordModal({
                   {f.label}
                   {f.required && <span className="text-red-400 ml-1">*</span>}
                 </label>
-                {f.type === "select" && f.options ? (
+                {f.key === "Running Shoes" && sheet === "running" ? (
+                  <select
+                    value={form[f.key] || ""}
+                    onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                    className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                  >
+                    <option value="">Select a shoe...</option>
+                    {availableShoes.map((shoe) => (
+                      <option key={shoe} value={shoe}>{shoe}</option>
+                    ))}
+                  </select>
+                ) : f.type === "select" && f.options ? (
                   <select
                     value={form[f.key] || ""}
                     onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
