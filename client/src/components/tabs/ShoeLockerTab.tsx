@@ -93,7 +93,7 @@ function ShoeHistoryModal({
               <img src={photoUrl} alt={shoeName} className="w-14 h-14 object-contain rounded-lg bg-secondary p-1 shrink-0" />
             )}
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground mb-0.5">Shoe Activity History</p>
+              <p className="text-sm text-muted-foreground mb-0.5">Shoe Activity History</p>
               <DialogTitle className="font-display text-base text-foreground leading-snug">{shoeName}</DialogTitle>
             </div>
           </div>
@@ -102,16 +102,16 @@ function ShoeHistoryModal({
         {/* Summary stats */}
         <div className="grid grid-cols-3 gap-3 shrink-0">
           <div className="bg-secondary rounded-xl p-3 text-center">
-            <p className="font-mono-metric text-xl font-bold text-foreground">{shoeActivities.length}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Sessions</p>
+            <p className="font-mono-metric text-2xl font-bold text-foreground">{shoeActivities.length}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Sessions</p>
           </div>
           <div className="bg-secondary rounded-xl p-3 text-center">
-            <p className="font-mono-metric text-xl font-bold text-primary">{totalKm.toFixed(1)}<span className="text-sm font-normal text-muted-foreground ml-1">km</span></p>
-            <p className="text-xs text-muted-foreground mt-0.5">Total Distance</p>
+            <p className="font-mono-metric text-2xl font-bold text-primary">{totalKm.toFixed(1)}<span className="text-sm font-normal text-muted-foreground ml-1">km</span></p>
+            <p className="text-sm text-muted-foreground mt-0.5">Total Distance</p>
           </div>
           <div className="bg-secondary rounded-xl p-3 text-center">
-            <p className="font-mono-metric text-xl font-bold text-foreground">{avgPace > 0 ? paceToString(avgPace) : "—"}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Avg Pace /km</p>
+            <p className="font-mono-metric text-2xl font-bold text-foreground">{avgPace > 0 ? paceToString(avgPace) : "—"}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Avg Pace /km</p>
           </div>
         </div>
 
@@ -133,17 +133,17 @@ function ShoeHistoryModal({
                 return (
                   <div key={i} className="flex items-center gap-3 bg-secondary/60 hover:bg-secondary rounded-xl px-3 py-2.5 transition-colors">
                     <div className="shrink-0 text-center w-14">
-                      <p className="text-[10px] text-muted-foreground">{formatDateDisplay(l.Date)}</p>
+                      <p className="text-sm text-muted-foreground">{formatDateDisplay(l.Date)}</p>
                     </div>
                     <div className="shrink-0">
                       <span
-                        className="text-[10px] px-2 py-0.5 rounded-full font-semibold text-white"
+                        className="text-sm px-2 py-0.5 rounded-full font-semibold text-white"
                         style={{ background: rtColor }}
                       >
                         {rt || "Run"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 ml-auto text-xs font-mono-metric">
+                    <div className="flex items-center gap-3 ml-auto text-sm font-mono-metric">
                       <span className="flex items-center gap-1 text-foreground font-semibold">
                         <Footprints className="w-3 h-3 text-muted-foreground" />
                         {dist > 0 ? `${dist.toFixed(2)} km` : "—"}
@@ -292,20 +292,20 @@ export default function ShoeLockerTab() {
       {/* ── Summary stats ───────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-foreground">{processedShoes.length}</p>
-          <p className="text-xs text-muted-foreground mt-1">Total Shoes</p>
+          <p className="font-display font-700 text-3xl text-foreground">{processedShoes.length}</p>
+          <p className="text-sm text-muted-foreground mt-1">Total Shoes</p>
         </div>
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-emerald-600">{inUseCount}</p>
-          <p className="text-xs text-muted-foreground mt-1">In Rotation</p>
+          <p className="font-display font-700 text-3xl text-emerald-600">{inUseCount}</p>
+          <p className="text-sm text-muted-foreground mt-1">In Rotation</p>
         </div>
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-amber-600">HK${totalSpend.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground mt-1">Total Investment</p>
+          <p className="font-display font-700 text-3xl text-amber-600">HK${totalSpend.toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground mt-1">Total Investment</p>
         </div>
         <div className="glass-card rounded-xl p-4 text-center">
-          <p className="font-display font-700 text-2xl text-primary">{totalDist.toFixed(0)} km</p>
-          <p className="text-xs text-muted-foreground mt-1">Total Distance Run</p>
+          <p className="font-display font-700 text-3xl text-primary">{totalDist.toFixed(0)} km</p>
+          <p className="text-sm text-muted-foreground mt-1">Total Distance Run</p>
         </div>
       </div>
 
@@ -318,7 +318,7 @@ export default function ShoeLockerTab() {
               key={s}
               onClick={() => setStatusFilter(s)}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
                 statusFilter === s
                   ? "bg-primary/15 text-primary border-primary/40"
                   : "bg-white border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
@@ -333,7 +333,7 @@ export default function ShoeLockerTab() {
 
         {/* Sort chips */}
         <div className="flex flex-wrap gap-1.5 items-center">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mr-1">Sort:</span>
+          <span className="text-sm text-muted-foreground uppercase tracking-wider font-medium mr-1">Sort:</span>
           {SORT_OPTIONS.map(({ key, label, icon: Icon }) => {
             const active = sortKey === key;
             return (
@@ -341,7 +341,7 @@ export default function ShoeLockerTab() {
                 key={key}
                 onClick={() => handleSort(key)}
                 className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all border",
+                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium transition-all border",
                   active
                     ? "bg-primary/15 text-primary border-primary/40"
                     : "bg-white text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
@@ -359,7 +359,7 @@ export default function ShoeLockerTab() {
           })}
         </div>
 
-        <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+        <span className="ml-auto text-sm text-muted-foreground shrink-0">
           {filtered.length} shoe{filtered.length !== 1 ? "s" : ""} · Click a card to view activities
         </span>
       </div>
@@ -416,7 +416,7 @@ export default function ShoeLockerTab() {
                   {/* Status badge top-left */}
                   <div className="absolute top-2 left-2">
                     <span className={cn(
-                      "text-[10px] px-2 py-0.5 rounded-full border font-medium",
+                      "text-sm px-2 py-0.5 rounded-full border font-medium",
                       STATUS_COLORS[status] || "bg-slate-100 text-slate-500 border-slate-300"
                     )}>
                       {status}
@@ -439,14 +439,14 @@ export default function ShoeLockerTab() {
 
                   {/* Warning overlay */}
                   {isWarning && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-orange-100/90 backdrop-blur-sm px-3 py-1.5 text-[10px] text-orange-700 text-center font-medium">
+                    <div className="absolute bottom-0 left-0 right-0 bg-orange-100/90 backdrop-blur-sm px-3 py-1.5 text-sm text-orange-700 text-center font-medium">
                       ⚠ Approaching {MAX_SHOE_DIST} km retirement
                     </div>
                   )}
 
                   {/* "View activities" hint */}
                   <div className="absolute inset-0 bg-primary/0 hover:bg-primary/5 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                    <span className="bg-white/90 text-primary text-[10px] font-semibold px-3 py-1.5 rounded-full shadow">
+                    <span className="bg-white/90 text-primary text-base font-semibold px-3 py-1.5 rounded-full shadow">
                       View {shoe.usageCount} activities →
                     </span>
                   </div>
@@ -456,13 +456,13 @@ export default function ShoeLockerTab() {
                 <div className="p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
                   {/* Name + brand */}
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{brand}</p>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wider font-medium">{brand}</p>
                     <p className="font-display font-600 text-foreground text-sm leading-snug mt-0.5">{shortName}</p>
                   </div>
 
                   {/* Distance progress bar */}
                   <div>
-                    <div className="flex justify-between text-[10px] mb-1">
+                    <div className="flex justify-between text-sm mb-1">
                       <span className="text-muted-foreground">Distance used</span>
                       <span className={cn("font-mono-metric font-600", isWarning ? "text-orange-600" : "text-foreground")}>
                         {shoe.totalDist.toFixed(1)} km
@@ -477,7 +477,7 @@ export default function ShoeLockerTab() {
                         style={{ width: `${distPct}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
+                    <div className="flex justify-between text-sm text-muted-foreground mt-0.5">
                       <span>0 km</span>
                       <span>{MAX_SHOE_DIST} km</span>
                     </div>
@@ -502,19 +502,19 @@ export default function ShoeLockerTab() {
                   <div className="flex items-center gap-2 pt-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditShoe(raw); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors"
                     >
                       <Pencil className="w-3 h-3" /> Edit
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteShoe(raw); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 text-red-500 hover:bg-red-100 border border-red-200 transition-colors"
                     >
                       <Trash2 className="w-3 h-3" /> Delete
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedShoe({ name: fullName, photo: photoUrl }); }}
-                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
+                      className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
                     >
                       <Activity className="w-3 h-3" /> {shoe.usageCount} runs
                     </button>
@@ -575,15 +575,15 @@ export default function ShoeLockerTab() {
 function StatCell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="bg-secondary rounded-lg px-2 py-2 text-center">
-      <p className="text-[9px] text-muted-foreground mb-0.5">{label}</p>
-      <p className={cn("font-mono-metric text-xs font-600", color || "text-foreground")}>{value}</p>
+      <p className="text-sm text-muted-foreground mb-0.5">{label}</p>
+      <p className={cn("font-mono-metric text-sm font-600", color || "text-foreground")}>{value}</p>
     </div>
   );
 }
 
 function DateRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <Icon className="w-3 h-3 shrink-0" />
       <span>{label}:</span>
       <span className="text-foreground/70">{value}</span>

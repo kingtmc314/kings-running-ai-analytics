@@ -11,7 +11,7 @@ import {
   ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Cell, LineChart, Line, ReferenceLine,
 } from "recharts";
-import { ChevronDown, BarChart3, RotateCcw, TrendingUp } from "lucide-react";
+import { ChevronDown, BarChart3, RotateCcw, TrendingUp, Activity } from "lucide-react";
 
 type AnalyticsView = "monthly" | "yearly" | "shoes" | "daily";
 
@@ -33,7 +33,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   const total = payload.reduce((s, p) => s + (p.value || 0), 0);
   return (
-    <div className="bg-slate-900/95 border border-white/15 rounded-xl p-3 shadow-2xl text-xs min-w-[160px]">
+    <div className="bg-slate-900/95 border border-white/15 rounded-xl p-3 shadow-2xl text-sm min-w-[160px]">
       <p className="text-white font-display font-600 mb-2 border-b border-white/10 pb-1.5">{label}</p>
       <div className="space-y-1">
         {[...payload].reverse().map((p) => (
@@ -83,7 +83,7 @@ function DropdownSlicer({
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all",
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-all",
             open || (multiSelect ? (selected?.length ?? 0) > 0 : value !== "All")
             ? "bg-primary/15 border-primary/40 text-primary"
             : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
@@ -107,7 +107,7 @@ function DropdownSlicer({
                     else { onChange?.(opt); setOpen(false); }
                   }}
                   className={cn(
-                    "w-full text-left px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-2",
+                    "w-full text-left px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2",
                     isActive
                       ? "bg-primary/15 text-primary"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -169,8 +169,14 @@ export default function AnalyticsTab() {
       if (typeFilters.length > 0 && !typeFilters.includes(rt)) return false;
       if (shoeStatusFilter !== "All") {
         const sn = getShoeName(l);
-        const shoe = shoes.find((s) => (s.Shoes || s["Shoes Name"]) === sn);
-        if (!shoe || shoe.Status !== shoeStatusFilter) return false;
+        const shoe = shoes.find((s) => {
+          const sr = s as unknown as Record<string, unknown>;
+          return String(sr["Shoes Name"] || sr["Shoes"] || "") === sn;
+        });
+        if (!shoe) return false;
+        const shoeRaw = shoe as unknown as Record<string, unknown>;
+        const shoeStatus = String(shoeRaw["Status"] || shoe.Status || "");
+        if (shoeStatus !== shoeStatusFilter) return false;
       }
       return true;
     });
@@ -262,7 +268,7 @@ export default function AnalyticsTab() {
               key={key}
               onClick={() => setView(key)}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
                 view === key
                   ? "bg-white text-primary shadow-sm"
                   : "text-slate-500 hover:text-slate-900"
@@ -305,7 +311,7 @@ export default function AnalyticsTab() {
         {hasFilters && (
           <button
             onClick={resetFilters}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-900 transition-all bg-white"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-900 transition-all bg-white"
           >
             <RotateCcw className="w-3 h-3" />
             Reset
@@ -316,18 +322,18 @@ export default function AnalyticsTab() {
         <div className="ml-auto flex items-center gap-3 shrink-0">
           <div className="text-right">
             <p className="font-mono-metric text-primary text-sm font-600">{totalKm.toFixed(1)} km</p>
-            <p className="text-[9px] text-muted-foreground">Total</p>
+            <p className="text-sm text-muted-foreground">Total</p>
           </div>
           {view === "monthly" && avgPerMonth > 0 && (
             <div className="text-right">
               <p className="font-mono-metric text-emerald-600 text-sm font-600">{avgPerMonth.toFixed(1)} km</p>
-              <p className="text-[9px] text-muted-foreground">Avg/Month</p>
+              <p className="text-sm text-muted-foreground">Avg/Month</p>
             </div>
           )}
           {peakMonth && (
             <div className="text-right">
               <p className="font-mono-metric text-amber-600 text-sm font-600">{((peakMonth as Record<string, unknown>).total as number || 0).toFixed(1)} km</p>
-              <p className="text-[9px] text-muted-foreground">Peak: {peakMonth.key}</p>
+              <p className="text-sm text-muted-foreground">Peak: {peakMonth.key}</p>
             </div>
           )}
         </div>
@@ -340,7 +346,7 @@ export default function AnalyticsTab() {
           <h2 className="font-display font-600 text-slate-800 text-sm">
             {VIEW_OPTIONS.find((v) => v.key === view)?.label} Distance Analysis
           </h2>
-          <span className="text-[10px] text-muted-foreground ml-1">
+          <span className="text-sm text-muted-foreground ml-1">
             ({filteredLogs.length} activities)
           </span>
         </div>
@@ -397,6 +403,9 @@ export default function AnalyticsTab() {
       {/* ── Training Load: Weekly Volume + 4-week Rolling Avg ── */}
       <TrainingLoadChart logs={filteredLogs} />
 
+      {/* ── Metrics Analysis: HR, Cadence, GCT, Step Length ── */}
+      <MetricsChart logs={filteredLogs} />
+
       {/* ── Run type breakdown mini-cards ───────────────────── */}
       {usedTypes.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -412,10 +421,10 @@ export default function AnalyticsTab() {
                     className="w-2 h-2 rounded-sm shrink-0"
                     style={{ background: RUN_TYPE_COLORS[rt] || "#64748b" }}
                   />
-                  <span className="text-[10px] text-muted-foreground truncate">{rt}</span>
+                  <span className="text-sm text-muted-foreground truncate">{rt}</span>
                 </div>
-                <p className="font-mono-metric text-white text-sm font-600">{km.toFixed(1)}</p>
-                <p className="text-[9px] text-muted-foreground">{pct.toFixed(1)}%</p>
+                <p className="font-mono-metric text-slate-800 text-sm font-600">{km.toFixed(1)}</p>
+                <p className="text-sm text-muted-foreground">{pct.toFixed(1)}%</p>
               </div>
             );
           })}
@@ -475,33 +484,33 @@ function TrainingLoadChart({ logs }: { logs: RunLog[] }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-emerald-400" />
-          <h2 className="font-display font-600 text-white text-sm">Training Load — Weekly Volume</h2>
-          <span className="text-[10px] text-muted-foreground ml-1">(last 52 weeks)</span>
+          <h2 className="font-display font-600 text-slate-800 text-base">Training Load — Weekly Volume</h2>
+          <span className="text-sm text-muted-foreground ml-1">(last 52 weeks)</span>
         </div>
         <div className="flex items-center gap-4 shrink-0">
           <div className="text-right">
-            <p className="font-mono-metric text-emerald-400 text-xs font-600">{avgKm.toFixed(1)} km</p>
-            <p className="text-[9px] text-muted-foreground">Avg/Week</p>
+            <p className="font-mono-metric text-emerald-600 text-sm font-600">{avgKm.toFixed(1)} km</p>
+            <p className="text-sm text-muted-foreground">Avg/Week</p>
           </div>
           <div className="text-right">
-            <p className="font-mono-metric text-amber-400 text-xs font-600">{maxKm.toFixed(1)} km</p>
-            <p className="text-[9px] text-muted-foreground">Peak Week</p>
+            <p className="font-mono-metric text-amber-600 text-sm font-600">{maxKm.toFixed(1)} km</p>
+            <p className="text-sm text-muted-foreground">Peak Week</p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mb-3 text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-4 mb-3 text-sm text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-2 rounded-sm bg-blue-500/60 inline-block" />
-          Weekly km
+          <span className="text-slate-600">Weekly km</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-5 h-0 border-t-2 border-dashed border-amber-400 inline-block" />
-          4-week rolling avg
+          <span className="text-slate-600">4-week rolling avg</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-5 h-0 border-t border-dashed border-slate-500/50 inline-block" />
-          Overall avg ({avgKm.toFixed(0)} km)
+          <span className="text-slate-600">Overall avg ({avgKm.toFixed(0)} km)</span>
         </span>
       </div>
 
@@ -566,6 +575,217 @@ function TrainingLoadChart({ logs }: { logs: RunLog[] }) {
           />
         </ComposedChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ─── Metrics Analysis Chart ───────────────────────────────────
+// Shows monthly averages for: Avg HR, Cadence, Ground Contact Time, Step Length
+
+type MetricKey = "avgHR" | "cadence" | "gct" | "stepLength";
+
+const METRIC_CONFIG: Record<MetricKey, { label: string; unit: string; color: string; field: string; scale?: number }> = {
+  avgHR:      { label: "Avg Heart Rate",        unit: "bpm",  color: "#ef4444", field: "Average Heart Rate" },
+  cadence:    { label: "Avg Cadence",            unit: "spm",  color: "#3b82f6", field: "Average Cadence" },
+  gct:        { label: "Ground Contact Time",    unit: "ms",   color: "#f59e0b", field: "Ground Contact Time" },
+  stepLength: { label: "Step Length",            unit: "m",    color: "#10b981", field: "Step Length" },
+};
+
+function MetricsChart({ logs }: { logs: RunLog[] }) {
+  const [activeMetric, setActiveMetric] = useState<MetricKey>("avgHR");
+
+  const chartData = useMemo(() => {
+    const cfg = METRIC_CONFIG[activeMetric];
+    const grouped: Record<string, { sum: number; count: number }> = {};
+
+    logs.forEach((l) => {
+      const d = parseDate(l.Date);
+      if (!d) return;
+      const raw = l as unknown as Record<string, unknown>;
+      const val = parseFloat(String(raw[cfg.field] ?? ""));
+      if (isNaN(val) || val <= 0) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!grouped[key]) grouped[key] = { sum: 0, count: 0 };
+      grouped[key].sum += val;
+      grouped[key].count += 1;
+    });
+
+    return Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, { sum, count }]) => ({
+        month,
+        value: parseFloat((sum / count).toFixed(2)),
+      }));
+  }, [logs, activeMetric]);
+
+  const cfg = METRIC_CONFIG[activeMetric];
+
+  // Summary stats
+  const avgVal = chartData.length > 0
+    ? chartData.reduce((s, d) => s + d.value, 0) / chartData.length
+    : 0;
+  const minVal = chartData.length > 0 ? Math.min(...chartData.map((d) => d.value)) : 0;
+  const maxVal = chartData.length > 0 ? Math.max(...chartData.map((d) => d.value)) : 0;
+  const latest = chartData.length > 0 ? chartData[chartData.length - 1].value : 0;
+  const trend = chartData.length >= 2
+    ? chartData[chartData.length - 1].value - chartData[chartData.length - 2].value
+    : 0;
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <div className="glass-card rounded-xl p-5">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-primary" />
+          <h2 className="font-display font-semibold text-slate-800 text-base">Metrics Analysis</h2>
+          <span className="text-sm text-muted-foreground ml-1">Monthly averages</span>
+        </div>
+        {/* Summary stats */}
+        <div className="flex items-center gap-4 shrink-0 flex-wrap">
+          <div className="text-right">
+            <p className="font-mono-metric text-sm font-semibold" style={{ color: cfg.color }}>
+              {latest.toFixed(activeMetric === "stepLength" ? 2 : 0)} {cfg.unit}
+            </p>
+            <p className="text-sm text-muted-foreground">Latest</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono-metric text-sm font-semibold text-slate-700">
+              {avgVal.toFixed(activeMetric === "stepLength" ? 2 : 0)} {cfg.unit}
+            </p>
+            <p className="text-sm text-muted-foreground">Avg</p>
+          </div>
+          <div className="text-right">
+            <p className={`font-mono-metric text-sm font-semibold ${trend >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+              {trend >= 0 ? "+" : ""}{trend.toFixed(activeMetric === "stepLength" ? 2 : 1)} {cfg.unit}
+            </p>
+            <p className="text-sm text-muted-foreground">vs prev month</p>
+          </div>
+          <div className="text-right">
+            <p className="font-mono-metric text-sm font-semibold text-slate-500">
+              {minVal.toFixed(activeMetric === "stepLength" ? 2 : 0)} – {maxVal.toFixed(activeMetric === "stepLength" ? 2 : 0)}
+            </p>
+            <p className="text-sm text-muted-foreground">Range</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Metric selector tabs */}
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-0.5 mb-4 w-fit flex-wrap">
+        {(Object.entries(METRIC_CONFIG) as [MetricKey, typeof METRIC_CONFIG[MetricKey]][]).map(([key, c]) => (
+          <button
+            key={key}
+            onClick={() => setActiveMetric(key)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              activeMetric === key
+                ? "bg-white shadow-sm"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+            style={activeMetric === key ? { color: c.color } : {}}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={280}>
+        <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 40 }}>
+          <defs>
+            <linearGradient id={`metricGrad-${activeMetric}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={cfg.color} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={cfg.color} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.2)" vertical={false} />
+          <XAxis
+            dataKey="month"
+            tick={{ fill: "#64748b", fontSize: 11 }}
+            tickLine={false}
+            axisLine={{ stroke: "rgba(148,163,184,0.3)" }}
+            angle={-35}
+            textAnchor="end"
+            interval={Math.max(0, Math.floor(chartData.length / 18))}
+          />
+          <YAxis
+            tick={{ fill: "#64748b", fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v) =>
+              activeMetric === "stepLength" ? v.toFixed(2) : Math.round(v).toString()
+            }
+            label={{
+              value: cfg.unit,
+              angle: -90,
+              position: "insideLeft",
+              fill: "#475569",
+              fontSize: 11,
+              dy: 30,
+            }}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "#fff",
+              border: "1px solid #e2e8f0",
+              borderRadius: 10,
+              fontSize: 13,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+            }}
+            labelStyle={{ color: "#475569", fontWeight: 600, marginBottom: 4 }}
+            formatter={(value: number) => [
+              `${activeMetric === "stepLength" ? value.toFixed(2) : value.toFixed(1)} ${cfg.unit}`,
+              cfg.label,
+            ]}
+          />
+          <ReferenceLine
+            y={avgVal}
+            stroke={cfg.color}
+            strokeDasharray="5 3"
+            strokeOpacity={0.5}
+            label={{
+              value: `Avg ${avgVal.toFixed(activeMetric === "stepLength" ? 2 : 0)}`,
+              fill: cfg.color,
+              fontSize: 10,
+              position: "right",
+            }}
+          />
+          <Bar
+            dataKey="value"
+            fill={`url(#metricGrad-${activeMetric})`}
+            stroke={cfg.color}
+            strokeWidth={1.5}
+            maxBarSize={28}
+            radius={[4, 4, 0, 0]}
+          />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke={cfg.color}
+            strokeWidth={2.5}
+            dot={{ fill: cfg.color, r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5, fill: cfg.color }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {/* Insight note */}
+      <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+        <p className="text-sm text-slate-600">
+          {activeMetric === "avgHR" && (
+            <>A <strong>lower average HR</strong> at the same pace indicates improved aerobic efficiency. Track this alongside pace to measure fitness gains.</>
+          )}
+          {activeMetric === "cadence" && (
+            <>Optimal running cadence is typically <strong>170–180 spm</strong>. Higher cadence reduces ground impact and injury risk. Aim to gradually increase if below 165 spm.</>
+          )}
+          {activeMetric === "gct" && (
+            <>Shorter <strong>ground contact time (GCT)</strong> indicates better running economy and faster leg turnover. Elite runners typically achieve under 200ms.</>
+          )}
+          {activeMetric === "stepLength" && (
+            <>Longer <strong>step length</strong> at the same cadence means more speed. Improving step length through strength and flexibility training is key for race performance.</>
+          )}
+        </p>
+      </div>
     </div>
   );
 }

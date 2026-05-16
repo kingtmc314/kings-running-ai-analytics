@@ -101,7 +101,7 @@ export default function EditRecordModal({
                 f.type === "textarea" && "col-span-2"
               )}
             >
-              <Label className="text-xs font-medium text-slate-600 uppercase tracking-wide">
+              <Label className="text-sm font-medium text-slate-600 uppercase tracking-wide">
                 {f.label}
                 {f.required && <span className="text-red-500 ml-0.5">*</span>}
               </Label>

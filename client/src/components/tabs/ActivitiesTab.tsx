@@ -140,12 +140,12 @@ function ActivityDetailModal({
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: rtColor }}>
+                <span className="text-sm px-2 py-0.5 rounded-full font-semibold text-white" style={{ background: rtColor }}>
                   {rt || "Run"}
                 </span>
-                <span className="text-xs text-muted-foreground">{formatDateDisplay(date)}</span>
+                <span className="text-sm text-muted-foreground">{formatDateDisplay(date)}</span>
               </div>
-              <DialogTitle className="font-display text-xl text-foreground">
+              <DialogTitle className="font-display text-2xl text-foreground">
                 {dist > 0 ? `${dist.toFixed(2)} km` : "Activity"} — {rt || "Run"}
               </DialogTitle>
             </div>
@@ -177,10 +177,10 @@ function ActivityDetailModal({
             { label: "Avg Pace", value: paceSec > 0 ? paceToString(paceSec) : "—", unit: "/km" },
           ].map((s) => (
             <div key={s.label} className="bg-secondary rounded-xl p-3 text-center">
-              <p className="font-mono-metric text-2xl font-bold text-foreground">
+              <p className="font-mono-metric text-3xl font-bold text-foreground">
                 {s.value}<span className="text-sm font-normal text-muted-foreground ml-1">{s.unit}</span>
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
@@ -191,7 +191,7 @@ function ActivityDetailModal({
             <Heart className={cn("w-5 h-5 shrink-0", zone.color)} />
             <div>
               <p className={cn("font-semibold text-sm", zone.color)}>{zone.zone}</p>
-              <p className="text-xs text-muted-foreground">Avg HR: {avgHR} bpm · Max HR: {maxHR || "—"} bpm</p>
+              <p className="text-sm text-muted-foreground">Avg HR: {avgHR} bpm · Max HR: {maxHR || "—"} bpm</p>
             </div>
           </div>
         )}
@@ -209,30 +209,30 @@ function ActivityDetailModal({
           <div className={cn("rounded-xl border p-4 mt-1", weatherColor)}>
             <div className="flex items-center gap-2 mb-3">
               <Thermometer className="w-4 h-4 shrink-0" />
-              <p className="text-xs font-semibold uppercase tracking-wide">Weather Conditions</p>
+              <p className="text-base font-semibold uppercase tracking-wide">Weather Conditions</p>
             </div>
             <div className="grid grid-cols-3 gap-3 mb-2">
               {temp !== null && (
                 <div className="text-center">
-                  <p className="font-mono-metric text-xl font-bold">{temp}°C</p>
-                  <p className="text-[10px] opacity-70 mt-0.5">Temperature</p>
+                  <p className="font-mono-metric text-2xl font-bold">{temp}°C</p>
+                  <p className="text-sm opacity-70 mt-0.5">Temperature</p>
                 </div>
               )}
               {humidity !== null && (
                 <div className="text-center">
-                  <p className="font-mono-metric text-xl font-bold">{humidity}%</p>
-                  <p className="text-[10px] opacity-70 mt-0.5">Humidity</p>
+                  <p className="font-mono-metric text-2xl font-bold">{humidity}%</p>
+                  <p className="text-sm opacity-70 mt-0.5">Humidity</p>
                 </div>
               )}
               {windSpeed !== null && (
                 <div className="text-center">
-                  <p className="font-mono-metric text-xl font-bold">{windSpeed}</p>
-                  <p className="text-[10px] opacity-70 mt-0.5">Wind km/h</p>
+                  <p className="font-mono-metric text-2xl font-bold">{windSpeed}</p>
+                  <p className="text-sm opacity-70 mt-0.5">Wind km/h</p>
                 </div>
               )}
             </div>
             {weatherSummary && (
-              <p className="text-xs opacity-80 leading-relaxed border-t border-current/10 pt-2">{weatherSummary}</p>
+              <p className="text-sm opacity-80 leading-relaxed border-t border-current/10 pt-2">{weatherSummary}</p>
             )}
           </div>
         )}
@@ -246,8 +246,8 @@ function ActivityDetailModal({
                 <div key={m.label} className="bg-secondary rounded-lg px-3 py-2 flex items-center gap-2">
                   <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-[10px] text-muted-foreground truncate">{m.label}</p>
-                    <p className={cn("text-xs font-mono-metric font-semibold", m.color || "text-foreground")}>{m.value}</p>
+                    <p className="text-sm text-muted-foreground truncate">{m.label}</p>
+                    <p className={cn("text-sm font-mono-metric font-semibold", m.color || "text-foreground")}>{m.value}</p>
                   </div>
                 </div>
               );
@@ -402,7 +402,7 @@ export default function ActivitiesTab() {
             placeholder="Search activities…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full bg-white border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="w-full bg-white border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
           />
         </div>
         <div className="flex flex-wrap gap-1">
@@ -411,7 +411,7 @@ export default function ActivitiesTab() {
               key={t}
               onClick={() => { setTypeFilter(t); setPage(1); }}
               className={cn(
-                "text-[10px] px-2 py-1 rounded-md border transition-all",
+                "text-sm px-2 py-1 rounded-md border transition-all",
                 typeFilter === t
                   ? "bg-primary/15 border-primary/50 text-primary font-semibold"
                   : "bg-white border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
@@ -421,13 +421,13 @@ export default function ActivitiesTab() {
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted-foreground ml-auto">{sorted.length} activities</span>
+        <span className="text-sm text-muted-foreground ml-auto">{sorted.length} activities</span>
       </div>
 
       {/* Table */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/60">
                 <th className="text-left px-4 py-3 text-muted-foreground font-semibold cursor-pointer hover:text-foreground" onClick={() => handleSort("Date")}>
@@ -473,7 +473,7 @@ export default function ActivitiesTab() {
                   >
                     <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap group-hover:text-foreground transition-colors">{formatDateDisplay(l.Date)}</td>
                     <td className="px-4 py-2.5">
-                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium", rtBadge)}>
+                      <span className={cn("text-sm px-1.5 py-0.5 rounded border font-medium", rtBadge)}>
                         {rt || "—"}
                       </span>
                     </td>
@@ -483,7 +483,7 @@ export default function ActivitiesTab() {
                     <td className={cn("px-4 py-2.5 text-right font-mono-metric font-semibold", zone.color)}>{avgHR || "—"}</td>
                     <td className="px-4 py-2.5 text-right font-mono-metric text-muted-foreground">{String(raw["Maximum Heart Rate"] ?? "—")}</td>
                     <td className="px-4 py-2.5 text-center">
-                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", zone.bg, zone.color)}>
+                      <span className={cn("text-sm px-1.5 py-0.5 rounded-full font-medium", zone.bg, zone.color)}>
                         {zone.zone}
                       </span>
                     </td>
@@ -526,15 +526,15 @@ export default function ActivitiesTab() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-xs bg-white border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm bg-white border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-40 transition-colors"
           >
             Prev
           </button>
-          <span className="text-xs text-muted-foreground">Page {page} / {totalPages}</span>
+          <span className="text-sm text-muted-foreground">Page {page} / {totalPages}</span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-xs bg-white border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm bg-white border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-40 transition-colors"
           >
             Next
           </button>

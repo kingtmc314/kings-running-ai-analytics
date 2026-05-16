@@ -118,10 +118,10 @@ export default function BodyFitnessTab() {
             const d = delta(f.key);
             return (
               <div key={f.key} className="glass-card rounded-xl p-4">
-                <p className="text-[10px] text-muted-foreground mb-1">{f.label}</p>
-                <p className="font-mono-metric font-600 text-foreground text-xl">{val || "—"}</p>
+                <p className="text-sm text-muted-foreground mb-1">{f.label}</p>
+                <p className="font-mono-metric font-600 text-foreground text-2xl">{val || "—"}</p>
                 {d !== null && (
-                  <p className={cn("text-[10px] flex items-center gap-0.5 mt-1", d < 0 ? "text-emerald-600" : "text-red-500")}>
+                  <p className={cn("text-sm flex items-center gap-0.5 mt-1", d < 0 ? "text-emerald-600" : "text-red-500")}>
                     {d < 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
                     {d > 0 ? "+" : ""}{d}
                   </p>
@@ -167,7 +167,7 @@ export default function BodyFitnessTab() {
       {/* History table */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="text-left px-4 py-3 text-muted-foreground font-semibold">Date</th>

@@ -118,7 +118,7 @@ export default function Dashboard() {
           {sidebarOpen && (
             <div className="overflow-hidden">
               <p className="font-display font-700 text-sm text-sidebar-foreground leading-tight">King's Running</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">AI Analytics</p>
+              <p className="text-sm text-muted-foreground leading-tight">AI Analytics</p>
             </div>
           )}
         </div>
@@ -154,7 +154,7 @@ export default function Dashboard() {
             onClick={() => fetchFromGoogle()}
             disabled={syncStatus === "loading"}
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-all",
+              "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all",
               "bg-sidebar-accent hover:bg-primary/20 text-muted-foreground hover:text-primary",
               syncStatus === "loading" && "opacity-60 cursor-not-allowed"
             )}
@@ -186,13 +186,13 @@ export default function Dashboard() {
           <h1 className="font-display font-700 text-base text-foreground">{activeLabel}</h1>
           <div className="ml-auto flex items-center gap-2">
             {syncStatus === "success" && (
-              <span className="text-xs text-emerald-500 flex items-center gap-1">
+              <span className="text-sm text-emerald-500 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
                 Live
               </span>
             )}
             {syncStatus === "error" && (
-              <span className="text-xs text-red-400">Sync failed</span>
+              <span className="text-sm text-red-400">Sync failed</span>
             )}
           </div>
         </header>
@@ -206,11 +206,11 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-display font-700 text-sm text-sidebar-foreground leading-tight truncate">King's Running</p>
-              <p className="text-[9px] text-muted-foreground leading-tight">AI Analytics</p>
+              <p className="text-sm text-muted-foreground leading-tight">AI Analytics</p>
             </div>
             {/* Sync indicator */}
             {syncStatus === "success" && (
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1 shrink-0">
+              <span className="text-sm text-emerald-400 flex items-center gap-1 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
                 Live
               </span>
@@ -232,7 +232,7 @@ export default function Dashboard() {
             className="flex items-center justify-between px-4 pb-2 cursor-pointer"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <span className="text-xs font-semibold text-primary">{activeLabel}</span>
+            <span className="text-base font-semibold text-primary">{activeLabel}</span>
             <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", mobileMenuOpen && "rotate-180")} />
           </div>
 
@@ -255,7 +255,7 @@ export default function Dashboard() {
                       )}
                     >
                       <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-primary" : "")} />
-                      <span className="truncate text-xs">{item.label}</span>
+                      <span className="truncate text-sm">{item.label}</span>
                     </button>
                   );
                 })}
@@ -265,7 +265,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => { fetchFromGoogle(); setMobileMenuOpen(false); }}
                   disabled={syncStatus === "loading"}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-sidebar-accent hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all disabled:opacity-60"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-sidebar-accent hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all disabled:opacity-60"
                 >
                   <RefreshCw className={cn("w-3.5 h-3.5", syncStatus === "loading" && "animate-spin")} />
                   {syncStatus === "loading" ? "Syncing…" : "Sync Data"}

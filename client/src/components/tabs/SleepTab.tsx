@@ -127,7 +127,7 @@ export default function SleepTab() {
       {/* Table */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="text-left px-4 py-3 text-muted-foreground font-semibold">Date</th>
@@ -209,9 +209,9 @@ function SleepStatCard({ icon: Icon, label, value, color }: { icon: React.Elemen
     <div className="glass-card rounded-xl p-4">
       <div className="flex items-center gap-2 mb-2">
         <Icon className={`w-4 h-4 ${color}`} />
-        <p className="text-[10px] text-muted-foreground">{label}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
       </div>
-      <p className={`font-mono-metric font-600 text-xl ${color}`}>{value}</p>
+      <p className={`font-mono-metric font-600 text-2xl ${color}`}>{value}</p>
     </div>
   );
 }

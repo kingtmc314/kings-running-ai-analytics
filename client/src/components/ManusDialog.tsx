@@ -61,7 +61,7 @@ export function ManusDialog({
 
           {/* Title and subtitle */}
           {title ? (
-            <DialogTitle className="text-xl font-semibold text-[#34322d] leading-[26px] tracking-[-0.44px]">
+            <DialogTitle className="text-2xl font-semibold text-[#34322d] leading-[26px] tracking-[-0.44px]">
               {title}
             </DialogTitle>
           ) : null}

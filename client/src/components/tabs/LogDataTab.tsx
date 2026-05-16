@@ -33,7 +33,7 @@ export default function LogDataTab() {
         <button
           onClick={() => fetchFromGoogle()}
           disabled={syncStatus === "loading"}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg text-xs transition-colors disabled:opacity-60"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg text-sm transition-colors disabled:opacity-60"
         >
           <RefreshCw className={cn("w-3.5 h-3.5", syncStatus === "loading" && "animate-spin")} />
           {syncStatus === "loading" ? "Syncing…" : "Sync Now"}
@@ -47,7 +47,7 @@ export default function LogDataTab() {
             key={s.id}
             onClick={() => setSheet(s.id)}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all border",
               sheet === s.id
                 ? "bg-primary/20 text-primary border-primary/40"
                 : "bg-slate-50 text-muted-foreground border-slate-200 hover:border-slate-300"
@@ -75,7 +75,7 @@ export default function LogDataTab() {
 
 function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white">
         <tr className="border-b border-slate-200">
           {["Date", "Type", "Dist (km)", "H", "M", "S", "Avg HR", "Max HR", "Shoe", "Calories", "Avg Cadence"].map((h) => (
@@ -106,7 +106,7 @@ function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
 
 function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white">
         <tr className="border-b border-slate-200">
           {["Name", "Brand", "Status", "Price", "Purchase Date", "First Use", "Retired Date"].map((h) => (
@@ -133,7 +133,7 @@ function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
 
 function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white">
         <tr className="border-b border-slate-200">
           {["Race", "Date", "Distance (km)", "Completed", "Overall Place", "AG Place"].map((h) => (
@@ -159,7 +159,7 @@ function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
 
 function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white">
         <tr className="border-b border-slate-200">
           {["Date", "Weight", "BMI", "Body Fat %", "Fat Mass", "Muscle", "BMR", "Visceral Fat"].map((h) => (
@@ -187,7 +187,7 @@ function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) 
 
 function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white">
         <tr className="border-b border-slate-200">
           {["Date", "Score", "Resting HR", "Body Battery", "Pulse Ox", "Respiration", "Stress", "Quality"].map((h) => (
@@ -215,7 +215,7 @@ function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }
 
 function HRTable({ hrs }: { hrs: ReturnType<typeof useData>["heartRates"] }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white">
         <tr className="border-b border-slate-200">
           {["Date", "Resting HR", "High HR"].map((h) => (

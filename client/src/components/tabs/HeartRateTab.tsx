@@ -99,16 +99,16 @@ export default function HeartRateTab() {
       {sorted.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           <div className="glass-card rounded-xl p-4 text-center">
-            <p className="text-[10px] text-muted-foreground mb-1">Latest Resting HR</p>
-            <p className="font-mono-metric font-700 text-2xl text-red-500">{sorted[sorted.length - 1].Resting} bpm</p>
+            <p className="text-sm text-muted-foreground mb-1">Latest Resting HR</p>
+            <p className="font-mono-metric font-700 text-3xl text-red-500">{sorted[sorted.length - 1].Resting} bpm</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
-            <p className="text-[10px] text-muted-foreground mb-1">Latest High HR</p>
-            <p className="font-mono-metric font-700 text-2xl text-orange-500">{sorted[sorted.length - 1].High || "—"} bpm</p>
+            <p className="text-sm text-muted-foreground mb-1">Latest High HR</p>
+            <p className="font-mono-metric font-700 text-3xl text-orange-500">{sorted[sorted.length - 1].High || "—"} bpm</p>
           </div>
           <div className="glass-card rounded-xl p-4 text-center">
-            <p className="text-[10px] text-muted-foreground mb-1">Max HR (configured)</p>
-            <p className="font-mono-metric font-700 text-2xl text-foreground">202 bpm</p>
+            <p className="text-sm text-muted-foreground mb-1">Max HR (configured)</p>
+            <p className="font-mono-metric font-700 text-3xl text-foreground">202 bpm</p>
           </div>
         </div>
       )}
@@ -152,7 +152,7 @@ export default function HeartRateTab() {
             </ResponsiveContainer>
             <div className="space-y-2">
               {zoneDistribution.map((z, i) => (
-                <div key={z.name} className="flex items-center gap-2 text-xs">
+                <div key={z.name} className="flex items-center gap-2 text-sm">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ZONE_COLORS[i % ZONE_COLORS.length] }} />
                   <span className="text-muted-foreground">{z.name}</span>
                   <span className="font-mono-metric text-foreground ml-auto">{z.value}</span>
@@ -166,7 +166,7 @@ export default function HeartRateTab() {
       {/* Table */}
       <div className="glass-card rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
                 <th className="text-left px-4 py-3 text-muted-foreground font-semibold">Date</th>

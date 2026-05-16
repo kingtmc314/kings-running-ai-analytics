@@ -125,9 +125,15 @@
   --run-hr: #ef4444;
 }
 
-/* Typography */
+/* Typography — increased base sizes for readability */
+html {
+  font-size: 16px; /* base: was effectively 14px via text-xs/sm everywhere */
+}
+
 body {
   font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .font-display {
