@@ -466,8 +466,8 @@ export function generateAiAnalysis(
     const isHotWet = raceMonth >= 5 && raceMonth <= 9;
     const isCoolDry = raceMonth <= 2 || raceMonth >= 11;
 
-    // Shoe scoring & table
-    const allShoesForTable = shoes.map((s) => {
+    // Shoe scoring & table — exclude retired shoes
+    const allShoesForTable = shoes.filter((s) => (s.Status || "") !== "Retired").map((s) => {
       const sname = s.Shoes || s["Shoes Name"] || "";
       const score = scoreShoe(sname, isXC, dist, isHotWet);
       const km = shoeKmMap[sname] || parseFloat(String((s as unknown as Record<string, unknown>)["TOTAL"] ?? "0")) || 0;
