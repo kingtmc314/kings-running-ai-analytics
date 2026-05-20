@@ -4,7 +4,7 @@
 // Field keys MUST match exact Google Sheet column names from API
 // =============================================================
 import { useState } from "react";
-import { RefreshCw, Database, Plus, X, Save, Loader2 } from "lucide-react";
+import { RefreshCw, Database, Plus, X, Save, Loader2, Search } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import { formatDateDisplay } from "@/lib/runningData";
 import { addRow } from "@/lib/sheetsApi";
@@ -21,6 +21,7 @@ interface FieldDef {
   required?: boolean;
   placeholder?: string;
   options?: string[];
+  hint?: string;
 }
 
 const SHEETS: { id: Sheet; label: string }[] = [
@@ -35,27 +36,30 @@ const SHEETS: { id: Sheet; label: string }[] = [
 // ─── Field definitions — EXACT Google Sheet column names ──────
 // Running Log: Date, Running Type, Running Shoes, Distance (km), Hour, Minutes, Second, Average Pace, Best Pace, Average Heart Rate, Maximum Heart Rate, Average Cadence, Max Cadence, Avg Stride Length (m), Avg Vertical Ratio, Vertical Oscillation (cm), Avg Ground Contact Time (ms), Calories, Temperature, Humidity, Wind Speed, Apparent Temp, Status
 const RUNNING_FIELDS: FieldDef[] = [
-  { key: "Date", label: "Date", type: "date", required: true },
+  { key: "Date", label: "Date", type: "date", required: true, hint: "Format: YYYY-MM-DD" },
   { key: "Running Type", label: "Running Type", type: "select", required: true,
-    options: ["Easy","Tempo","Interval","Long","Race","Recovery","Fartlek","Sprint","Trail","Time Trial","Treadmill (Gym)"] },
-  { key: "Distance (km)", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10.5" },
-  { key: "Hour", label: "Hours", type: "number", placeholder: "0" },
-  { key: "Minutes", label: "Minutes", type: "number", placeholder: "0" },
-  { key: "Second", label: "Seconds", type: "number", placeholder: "0" },
-  { key: "Average Heart Rate", label: "Avg HR (bpm)", type: "number", placeholder: "e.g. 155" },
-  { key: "Maximum Heart Rate", label: "Max HR (bpm)", type: "number", placeholder: "e.g. 175" },
-  { key: "Running Shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name" },
-  { key: "Calories", label: "Calories", type: "number", placeholder: "e.g. 650" },
-  { key: "Average Cadence", label: "Avg Cadence (spm)", type: "number", placeholder: "e.g. 172" },
-  { key: "Max Cadence", label: "Max Cadence (spm)", type: "number", placeholder: "e.g. 185" },
-  { key: "Avg Stride Length (m)", label: "Avg Stride Length (m)", type: "number", placeholder: "e.g. 1.25" },
-  { key: "Avg Vertical Ratio", label: "Avg Vertical Ratio", type: "number", placeholder: "e.g. 8.5" },
-  { key: "Vertical Oscillation (cm)", label: "Vertical Oscillation (cm)", type: "number", placeholder: "e.g. 9.2" },
-  { key: "Avg Ground Contact Time (ms)", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220" },
-  { key: "Average Pace", label: "Avg Pace (min/km)", type: "text", placeholder: "e.g. 5:30" },
-  { key: "Temperature", label: "Temperature (°C)", type: "number", placeholder: "e.g. 28" },
-  { key: "Humidity", label: "Humidity (%)", type: "number", placeholder: "e.g. 80" },
-  { key: "Wind Speed", label: "Wind Speed (km/h)", type: "number", placeholder: "e.g. 12" },
+    options: ["Easy","Tempo","Interval","Long","Race","Recovery","Fartlek","Sprint","Trail","Time Trial","Treadmill (Gym)"], hint: "Select the run intensity/type" },
+  { key: "Distance (km)", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10.5", hint: "Total distance in kilometers" },
+  { key: "Hour", label: "Hours", type: "number", placeholder: "0", hint: "Hours of running time" },
+  { key: "Minutes", label: "Minutes", type: "number", placeholder: "0", hint: "Minutes (0-59)" },
+  { key: "Second", label: "Seconds", type: "number", placeholder: "0", hint: "Seconds (0-59)" },
+  { key: "Average Heart Rate", label: "Avg HR (bpm)", type: "number", placeholder: "e.g. 155", hint: "Average heart rate during run" },
+  { key: "Maximum Heart Rate", label: "Max HR (bpm)", type: "number", placeholder: "e.g. 175", hint: "Peak heart rate during run" },
+  { key: "Running Shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name", hint: "Select from Shoe Locker" },
+  { key: "Calories", label: "Calories", type: "number", placeholder: "e.g. 650", hint: "Estimated calories burned" },
+  { key: "Average Cadence", label: "Avg Cadence (spm)", type: "number", placeholder: "e.g. 172", hint: "Steps per minute" },
+  { key: "Max Cadence", label: "Max Cadence (spm)", type: "number", placeholder: "e.g. 185", hint: "Maximum steps per minute" },
+  { key: "Avg Stride Length (m)", label: "Avg Stride Length (m)", type: "number", placeholder: "e.g. 1.25", hint: "Average stride in meters" },
+  { key: "Avg Vertical Ratio", label: "Avg Vertical Ratio", type: "number", placeholder: "e.g. 8.5", hint: "Vertical oscillation ratio" },
+  { key: "Vertical Oscillation (cm)", label: "Vertical Oscillation (cm)", type: "number", placeholder: "e.g. 9.2", hint: "Vertical bounce in centimeters" },
+  { key: "Avg Ground Contact Time (ms)", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220", hint: "Time foot contacts ground (milliseconds)" },
+  { key: "Average Pace", label: "Avg Pace (min/km)", type: "text", placeholder: "e.g. 5:30", hint: "Format: MM:SS" },
+  { key: "Best Pace", label: "Best Pace (min/km)", type: "text", placeholder: "e.g. 4:45", hint: "Format: MM:SS" },
+  { key: "Temperature", label: "Temperature (°C)", type: "number", placeholder: "e.g. 28", hint: "Ambient temperature" },
+  { key: "Apparent Temp", label: "Apparent Temp (°C)", type: "number", placeholder: "e.g. 32", hint: "Feels-like temperature" },
+  { key: "Humidity", label: "Humidity (%)", type: "number", placeholder: "e.g. 80", hint: "Relative humidity (0-100)" },
+  { key: "Wind Speed", label: "Wind Speed (km/h)", type: "number", placeholder: "e.g. 12", hint: "Wind speed in km/h" },
+  { key: "Status", label: "Status", type: "select", options: ["Completed", "Abandoned", "Paused"], hint: "Run completion status" },
 ];
 
 // Shoes: Shoes, Shoes Brand, Shoes Price, Purchase Date, First Use, Retired Date, ItemPhoto, Shoes Name, Status, TOTAL, COST
@@ -76,7 +80,11 @@ const RACES_FIELDS: FieldDef[] = [
   { key: "日期", label: "Date", type: "date", required: true },
   { key: "距離 (km)", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10" },
   { key: "完成", label: "Completed?", type: "select", options: ["true", "false"] },
+  { key: "Reg", label: "Registration", type: "text", placeholder: "e.g. Registered" },
+  { key: "BIB No", label: "BIB Number", type: "text", placeholder: "e.g. 12345" },
+  { key: "PB?", label: "Personal Best?", type: "select", options: ["true", "false"] },
   { key: "Overall Place", label: "Overall Place", type: "text", placeholder: "e.g. 45" },
+  { key: "Gender Group Place", label: "Gender Group Place", type: "text", placeholder: "e.g. 8" },
   { key: "Age Group Place", label: "Age Group Place", type: "text", placeholder: "e.g. 12" },
 ];
 
@@ -91,6 +99,12 @@ const BODY_FIELDS: FieldDef[] = [
   { key: "MuscleMass", label: "Muscle Mass (kg)", type: "number", placeholder: "e.g. 55.3" },
   { key: "BMR", label: "BMR (kcal)", type: "number", placeholder: "e.g. 1750" },
   { key: "VisceralFat", label: "Visceral Fat", type: "number", placeholder: "e.g. 8" },
+  { key: "FFM", label: "FFM (kg)", type: "number", placeholder: "e.g. 60" },
+  { key: "SMM", label: "SMM (kg)", type: "number", placeholder: "e.g. 30" },
+  { key: "Protein", label: "Protein (kg)", type: "number", placeholder: "e.g. 12" },
+  { key: "BoneMass", label: "Bone Mass (kg)", type: "number", placeholder: "e.g. 3.5" },
+  { key: "BodyWater", label: "Body Water (kg)", type: "number", placeholder: "e.g. 42" },
+  { key: "BodyWaterPercent", label: "Body Water (%)", type: "number", placeholder: "e.g. 60" },
 ];
 
 // Sleep: Date, Score, Resting Heart Rate, Body Battery, Pulse Ox, Respiration, Skin Temp Change, HRV Status, Quality, Duration, Sleep Need, Bedtime, Wake Time
@@ -101,7 +115,13 @@ const SLEEP_FIELDS: FieldDef[] = [
   { key: "Body Battery", label: "Body Battery", type: "number", placeholder: "0–100" },
   { key: "Pulse Ox", label: "Pulse Ox (%)", type: "text", placeholder: "e.g. 97" },
   { key: "Respiration", label: "Respiration (brpm)", type: "number", placeholder: "e.g. 14" },
+  { key: "Skin Temp Change", label: "Skin Temp Change (°C)", type: "number", placeholder: "e.g. 0.5" },
+  { key: "HRV Status", label: "HRV Status", type: "select", options: ["Balanced", "Low", "High"] },
   { key: "Quality", label: "Quality", type: "select", options: ["Excellent","Good","Fair","Poor"] },
+  { key: "Duration", label: "Duration (hours)", type: "number", placeholder: "e.g. 7.5" },
+  { key: "Sleep Need", label: "Sleep Need (hours)", type: "number", placeholder: "e.g. 8" },
+  { key: "Bedtime", label: "Bedtime (HH:MM)", type: "text", placeholder: "e.g. 23:00" },
+  { key: "Wake Time", label: "Wake Time (HH:MM)", type: "text", placeholder: "e.g. 06:30" },
 ];
 
 // Heart Rate: Date, Resting, High
@@ -247,6 +267,9 @@ function AddRecordModal({
                     className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
                   />
                 )}
+                {f.hint && (
+                  <p className="text-xs text-slate-500 mt-1">{f.hint}</p>
+                )}
               </div>
             ))}
           </div>
@@ -279,6 +302,25 @@ export default function LogDataTab() {
   const { logs, shoes, races, bodyStats, sleeps, heartRates, syncStatus, fetchFromGoogle } = useData();
   const [sheet, setSheet] = useState<Sheet>("running");
   const [showAdd, setShowAdd] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Filter records based on search query
+  const filterRecords = (records: Record<string, unknown>[], query: string): Record<string, unknown>[] => {
+    if (!query.trim()) return records;
+    const q = query.toLowerCase();
+    return records.filter((r) =>
+      Object.values(r).some((v) =>
+        String(v ?? "").toLowerCase().includes(q)
+      )
+    );
+  };
+  
+  const filteredLogs = filterRecords(logs, searchQuery);
+  const filteredShoes = filterRecords(shoes, searchQuery);
+  const filteredRaces = filterRecords(races, searchQuery);
+  const filteredBody = filterRecords(bodyStats, searchQuery);
+  const filteredSleep = filterRecords(sleeps, searchQuery);
+  const filteredHR = filterRecords(heartRates, searchQuery);
 
   const handleSaved = () => {
     setTimeout(() => fetchFromGoogle(), 800);
@@ -329,25 +371,37 @@ export default function LogDataTab() {
         ))}
       </div>
 
+      {/* Search bar */}
+      <div className="flex items-center gap-2">
+        <Search className="w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search records..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+        />
+      </div>
+
       {/* Record count */}
       <div className="text-sm text-slate-500">
-        {sheet === "running" && `${logs.length} records`}
-        {sheet === "shoes" && `${shoes.length} records`}
-        {sheet === "races" && `${races.length} records`}
-        {sheet === "body" && `${bodyStats.length} records`}
-        {sheet === "sleep" && `${sleeps.length} records`}
-        {sheet === "hr" && `${heartRates.length} records`}
+        {sheet === "running" && `${filteredLogs.length} of ${logs.length} records`}
+        {sheet === "shoes" && `${filteredShoes.length} of ${shoes.length} records`}
+        {sheet === "races" && `${filteredRaces.length} of ${races.length} records`}
+        {sheet === "body" && `${filteredBody.length} of ${bodyStats.length} records`}
+        {sheet === "sleep" && `${filteredSleep.length} of ${sleeps.length} records`}
+        {sheet === "hr" && `${filteredHR.length} of ${heartRates.length} records`}
       </div>
 
       {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto max-h-[60vh]">
-          {sheet === "running" && <RunningTable logs={[...logs].reverse()} />}
-          {sheet === "shoes" && <ShoesTable shoes={[...shoes].reverse()} />}
-          {sheet === "races" && <RacesTable races={[...races].reverse()} />}
-          {sheet === "body" && <BodyTable body={[...bodyStats].reverse()} />}
-          {sheet === "sleep" && <SleepTable sleeps={[...sleeps].reverse()} />}
-          {sheet === "hr" && <HRTable hrs={[...heartRates].reverse()} />}
+          {sheet === "running" && <RunningTable logs={[...filteredLogs].reverse()} />}
+          {sheet === "shoes" && <ShoesTable shoes={[...filteredShoes].reverse()} />}
+          {sheet === "races" && <RacesTable races={[...filteredRaces].reverse()} />}
+          {sheet === "body" && <BodyTable body={[...filteredBody].reverse()} />}
+          {sheet === "sleep" && <SleepTable sleeps={[...filteredSleep].reverse()} />}
+          {sheet === "hr" && <HRTable hrs={[...filteredHR].reverse()} />}
         </div>
       </div>
 
@@ -365,7 +419,7 @@ export default function LogDataTab() {
 
 // ─── Table Components ─────────────────────────────────────────
 
-function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
+function RunningTable({ logs }: { logs: Record<string, unknown>[] }) {
   return (
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
@@ -400,7 +454,7 @@ function RunningTable({ logs }: { logs: ReturnType<typeof useData>["logs"] }) {
   );
 }
 
-function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
+function ShoesTable({ shoes }: { shoes: Record<string, unknown>[] }) {
   return (
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
@@ -436,7 +490,7 @@ function ShoesTable({ shoes }: { shoes: ReturnType<typeof useData>["shoes"] }) {
   );
 }
 
-function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
+function RacesTable({ races }: { races: Record<string, unknown>[] }) {
   return (
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
@@ -462,7 +516,7 @@ function RacesTable({ races }: { races: ReturnType<typeof useData>["races"] }) {
   );
 }
 
-function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) {
+function BodyTable({ body }: { body: Record<string, unknown>[] }) {
   return (
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
@@ -491,7 +545,7 @@ function BodyTable({ body }: { body: ReturnType<typeof useData>["bodyStats"] }) 
   );
 }
 
-function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }) {
+function SleepTable({ sleeps }: { sleeps: Record<string, unknown>[] }) {
   return (
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
@@ -518,7 +572,7 @@ function SleepTable({ sleeps }: { sleeps: ReturnType<typeof useData>["sleeps"] }
   );
 }
 
-function HRTable({ hrs }: { hrs: ReturnType<typeof useData>["heartRates"] }) {
+function HRTable({ hrs }: { hrs: Record<string, unknown>[] }) {
   return (
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">

@@ -31,6 +31,7 @@ export interface FieldDef {
   placeholder?: string;
   required?: boolean;
   readOnly?: boolean;
+  hint?: string;        // validation/format hint
 }
 
 interface EditRecordModalProps {
@@ -141,6 +142,9 @@ export default function EditRecordModal({
                   placeholder={f.placeholder}
                   className="h-8 text-sm border-slate-200 bg-white text-slate-800 placeholder:text-slate-400"
                 />
+              )}
+              {f.hint && (
+                <p className="text-xs text-slate-500 mt-0.5">{f.hint}</p>
               )}
             </div>
           ))}
