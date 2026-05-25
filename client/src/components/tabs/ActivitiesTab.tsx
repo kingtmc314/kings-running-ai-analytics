@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import {
   Search, ChevronUp, ChevronDown, Footprints, Timer, Zap, Heart,
   Flame, Wind, Thermometer, Droplets, MapPin, StickyNote, Activity,
-  Pencil, Trash2,
+  Pencil, Trash2, TrendingUp,
 } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import {
@@ -21,7 +21,7 @@ import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
 import { updateRow, deleteRow } from "@/lib/sheetsApi";
 
-type SortKey = "Date" | "Distance" | "Time" | "Pace" | "HR";
+type SortKey = "Date" | "Distance" | "Time" | "Pace" | "HR" | "Cadence" | "StrideLength" | "VerticalOscillation" | "FormScore";
 type SortDir = "asc" | "desc";
 
 const PAGE_SIZE = 30;
@@ -310,6 +310,20 @@ export default function ActivitiesTab() {
   const [deleteLog, setDeleteLog] = useState<Record<string, unknown> | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Calculate running form score (0-100)
+  const getFormScore = (log: RunLog): number => {
+    const raw = log as unknown as Record<string, unknown>;
+    const cadence = parseFloat(String(raw["Average Cadence"] ?? "0")) || 0;
+    const strideLength = parseFloat(String(raw["Avg Stride Length (m)"] ?? "0")) || 0;
+    const verticalRatio = parseFloat(String(raw["Avg Vertical Ratio"] ?? "0")) || 0;
+    // Ideal ranges: cadence 170-180, stride 1.2-1.4m, vertical ratio 8-10%
+    let score = 50;
+    if (cadence >= 170 && cadence <= 180) score += 20; else if (cadence > 160 && cadence < 190) score += 10;
+    if (strideLength >= 1.2 && strideLength <= 1.4) score += 20; else if (strideLength > 1.0 && strideLength < 1.6) score += 10;
+    if (verticalRatio >= 8 && verticalRatio <= 10) score += 10; else if (verticalRatio > 6 && verticalRatio < 12) score += 5;
+    return Math.min(100, score);
+  };
+
   const runTypes = useMemo(() => [
     "All",
     ...Array.from(new Set(logs.map((l) => String((l as unknown as Record<string, unknown>)["Running Type"] || "")).filter(Boolean))),
@@ -354,6 +368,18 @@ export default function ActivitiesTab() {
       } else if (sortKey === "HR") {
         av = parseFloat(String(ra["Average Heart Rate"] ?? "0")) || 0;
         bv = parseFloat(String(rb["Average Heart Rate"] ?? "0")) || 0;
+      } else if (sortKey === "Cadence") {
+        av = parseFloat(String(ra["Average Cadence"] ?? "0")) || 0;
+        bv = parseFloat(String(rb["Average Cadence"] ?? "0")) || 0;
+      } else if (sortKey === "StrideLength") {
+        av = parseFloat(String(ra["Avg Stride Length (m)"] ?? "0")) || 0;
+        bv = parseFloat(String(rb["Avg Stride Length (m)"] ?? "0")) || 0;
+      } else if (sortKey === "VerticalOscillation") {
+        av = parseFloat(String(ra["Vertical Oscillation (cm)"] ?? "0")) || 0;
+        bv = parseFloat(String(rb["Vertical Oscillation (cm)"] ?? "0")) || 0;
+      } else if (sortKey === "FormScore") {
+        av = getFormScore(a);
+        bv = getFormScore(b);
       }
       return sortDir === "asc" ? av - bv : bv - av;
     });
@@ -441,12 +467,12 @@ export default function ActivitiesTab() {
       </div>
 
       {/* Table Header (Desktop) */}
-      <div className="hidden sm:grid grid-cols-5 gap-3 px-4 py-2 bg-secondary rounded-lg text-sm font-semibold text-muted-foreground">
+      <div className="hidden sm:grid grid-cols-7 gap-3 px-4 py-2 bg-secondary rounded-lg text-sm font-semibold text-muted-foreground">
         <button onClick={() => handleSort("Date")} className="flex items-center gap-1 hover:text-foreground">
           Date {sortKey === "Date" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
         </button>
         <button onClick={() => handleSort("Distance")} className="flex items-center gap-1 hover:text-foreground">
-          Distance {sortKey === "Distance" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+          Dist {sortKey === "Distance" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
         </button>
         <button onClick={() => handleSort("Time")} className="flex items-center gap-1 hover:text-foreground">
           Time {sortKey === "Time" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
@@ -456,6 +482,12 @@ export default function ActivitiesTab() {
         </button>
         <button onClick={() => handleSort("HR")} className="flex items-center gap-1 hover:text-foreground">
           HR {sortKey === "HR" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+        </button>
+        <button onClick={() => handleSort("Cadence")} className="flex items-center gap-1 hover:text-foreground">
+          Cadence {sortKey === "Cadence" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+        </button>
+        <button onClick={() => handleSort("FormScore")} className="flex items-center gap-1 hover:text-foreground">
+          Form {sortKey === "FormScore" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
         </button>
       </div>
 
@@ -476,6 +508,8 @@ export default function ActivitiesTab() {
             const avgHR = parseFloat(String(raw["Average Heart Rate"] ?? "0")) || 0;
             const rt = String(raw["Running Type"] || "");
             const shoe = getShoeName(log);
+            const cadence = parseFloat(String(raw["Average Cadence"] ?? "0")) || 0;
+            const formScore = getFormScore(log);
 
             return (
               <div
@@ -483,17 +517,25 @@ export default function ActivitiesTab() {
                 onClick={() => setSelectedLog(log)}
                 className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
               >
-                <div className="hidden sm:grid grid-cols-5 gap-3 text-sm">
-                  <div>{date}</div>
+                <div className="hidden sm:grid grid-cols-7 gap-3 text-sm items-center">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("px-2 py-1 rounded-full text-xs font-medium border", RUN_TYPE_BADGE[rt] || "bg-slate-500/20 text-slate-300 border-slate-500/30")}>{rt}</span>
+                    <span className="truncate">{date}</span>
+                  </div>
                   <div className="font-mono-metric font-semibold">{dist.toFixed(2)} km</div>
                   <div className="font-mono-metric font-semibold">{time}</div>
                   <div className="font-mono-metric font-semibold">{pace}</div>
                   <div className="font-mono-metric font-semibold">{avgHR > 0 ? `${Math.round(avgHR)} bpm` : "—"}</div>
+                  <div className="font-mono-metric font-semibold">{cadence > 0 ? `${Math.round(cadence)}` : "—"}</div>
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-primary" />
+                    <span className="font-mono-metric font-semibold">{Math.round(formScore)}</span>
+                  </div>
                 </div>
                 <div className="sm:hidden space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">{date}</span>
-                    <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">{rt}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold truncate">{date}</span>
+                    <span className={cn("px-2 py-1 rounded-full text-xs font-medium border shrink-0", RUN_TYPE_BADGE[rt] || "bg-slate-500/20 text-slate-300 border-slate-500/30")}>{rt}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div><p className="text-xs text-muted-foreground">Distance</p><p className="font-mono-metric font-semibold">{dist.toFixed(2)} km</p></div>
@@ -502,6 +544,13 @@ export default function ActivitiesTab() {
                     <div><p className="text-xs text-muted-foreground">HR</p><p className="font-mono-metric font-semibold">{avgHR > 0 ? `${Math.round(avgHR)} bpm` : "—"}</p></div>
                   </div>
                   {shoe !== "—" && <p className="text-xs text-muted-foreground">Shoe: {shoe}</p>}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-xs text-muted-foreground">Form Score</span>
+                    <span className="flex items-center gap-1 font-mono-metric font-semibold">
+                      <TrendingUp className="w-3 h-3 text-primary" />
+                      {Math.round(formScore)}
+                    </span>
+                  </div>
                 </div>
               </div>
             );

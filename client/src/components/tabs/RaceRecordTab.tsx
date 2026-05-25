@@ -3,7 +3,7 @@
 // Light theme: slate text on white cards, clear contrast
 // Edit and Delete per race card
 // =============================================================
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Trophy, Calendar, MapPin, Clock, TrendingUp, ChevronUp, ChevronDown,
   ChevronsUpDown, Footprints, Heart, Star, Pencil, Trash2,
@@ -65,7 +65,31 @@ export default function RaceRecordTab() {
   const [deleteRace, setDeleteRace] = useState<Record<string, unknown> | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Countdown timer
+  const [countdowns, setCountdowns] = useState<Record<number, string>>({});
+
   const now = new Date();
+
+  // Update countdown every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newCountdowns: Record<number, string> = {};
+      processedRacesList.forEach((race, idx) => {
+        const d = parseDate(race.日期);
+        if (d && d > now && !race.完成) {
+          const diff = d.getTime() - now.getTime();
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          if (days > 0) newCountdowns[idx] = `${days}d ${hours}h`;
+          else if (hours > 0) newCountdowns[idx] = `${hours}h ${mins}m`;
+          else newCountdowns[idx] = `${mins}m`;
+        }
+      });
+      setCountdowns(newCountdowns);
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [processedRacesList, now]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -287,9 +311,14 @@ export default function RaceRecordTab() {
                 <div className="px-4 py-3 space-y-3">
                   {/* Date + distance row */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                      <Calendar className="w-3.5 h-3.5 shrink-0" />
-                      {formatDateDisplay(race.日期)}
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <div className="flex flex-col">
+                        <span className="text-slate-500">{formatDateDisplay(race.日期)}</span>
+                        {isUpcoming && countdowns[i] && (
+                          <span className="text-xs font-semibold text-blue-600">{countdowns[i]} away</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="font-mono-metric text-slate-800 text-sm font-600">
