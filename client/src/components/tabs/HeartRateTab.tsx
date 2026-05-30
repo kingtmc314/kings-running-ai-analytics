@@ -9,7 +9,7 @@ import { parseDate, formatDateDisplay, getHRZone, HeartRateRecord } from "@/lib/
 import { toast } from "sonner";
 import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
-import { updateRow, deleteRow } from "@/lib/sheetsApi";
+// Supabase CRUD via DataContext
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -24,7 +24,7 @@ const HR_EDIT_FIELDS: FieldDef[] = [
 ];
 
 export default function HeartRateTab() {
-  const { heartRates, setHeartRates, logs, latestRestingHR, fetchFromGoogle } = useData();
+  const { heartRates, setHeartRates, logs, latestRestingHR, fetchFromGoogle, updateHREntry, deleteHREntry } = useData();
 
   const [editRecord, setEditRecord]       = useState<Record<string, unknown> | null>(null);
   const [editLoading, setEditLoading]     = useState(false);
@@ -60,36 +60,43 @@ export default function HeartRateTab() {
 
   async function handleEditSave(data: Record<string, string>) {
     if (!editRecord) return;
-    const row = editRecord["_row"] as number;
+    const supabaseId = editRecord["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot update: missing record ID"); return; }
     setEditLoading(true);
-    const result = await updateRow("Heart Rate", row, data);
-    setEditLoading(false);
-    if (result.success) {
+    try {
+      const supabaseData: Record<string, unknown> = {};
+      if (data["Date"]) supabaseData["date"] = data["Date"];
+      if (data["Resting"]) supabaseData["resting_heart_rate"] = parseFloat(data["Resting"]);
+      if (data["High"]) supabaseData["max_heart_rate"] = parseFloat(data["High"]);
+      await updateHREntry(supabaseId, supabaseData as Parameters<typeof updateHREntry>[1]);
       setHeartRates((prev) => prev.map((h) => {
-        if ((h as unknown as Record<string, unknown>)["_row"] === row) return { ...h, ...data } as unknown as HeartRateRecord;
+        if ((h as unknown as Record<string, unknown>)["_supabaseId"] === supabaseId) return { ...h, ...data } as unknown as HeartRateRecord;
         return h;
       }));
       toast.success("Heart rate record updated");
       setEditRecord(null);
       fetchFromGoogle();
-    } else {
-      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to update: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setEditLoading(false);
     }
   }
 
   async function handleDeleteConfirm() {
     if (!deleteRecord) return;
-    const row = deleteRecord["_row"] as number;
+    const supabaseId = deleteRecord["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot delete: missing record ID"); return; }
     setDeleteLoading(true);
-    const result = await deleteRow("Heart Rate", row);
-    setDeleteLoading(false);
-    if (result.success) {
-      setHeartRates((prev) => prev.filter((h) => (h as unknown as Record<string, unknown>)["_row"] !== row));
+    try {
+      await deleteHREntry(supabaseId);
+      setHeartRates((prev) => prev.filter((h) => (h as unknown as Record<string, unknown>)["_supabaseId"] !== supabaseId));
       toast.success("Heart rate record deleted");
       setDeleteRecord(null);
-      fetchFromGoogle();
-    } else {
-      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 

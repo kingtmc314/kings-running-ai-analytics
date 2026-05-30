@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
-import { updateRow, deleteRow } from "@/lib/sheetsApi";
+// Supabase CRUD via DataContext
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
@@ -35,7 +35,7 @@ const BODY_EDIT_FIELDS: FieldDef[] = [
 ];
 
 export default function BodyFitnessTab() {
-  const { bodyStats, setBodyStats, fetchFromGoogle } = useData();
+  const { bodyStats, setBodyStats, fetchFromGoogle, updateBodyEntry, deleteBodyEntry } = useData();
 
   // Edit state
   const [editRecord, setEditRecord] = useState<Record<string, unknown> | null>(null);
@@ -75,36 +75,49 @@ export default function BodyFitnessTab() {
 
   async function handleEditSave(data: Record<string, string>) {
     if (!editRecord) return;
-    const row = editRecord["_row"] as number;
+    const supabaseId = editRecord["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot update: missing record ID"); return; }
     setEditLoading(true);
-    const result = await updateRow("Body", row, data);
-    setEditLoading(false);
-    if (result.success) {
+    try {
+      // Map display keys to Supabase column names
+      const supabaseData: Record<string, unknown> = {};
+      if (data["Date"]) supabaseData["date"] = data["Date"];
+      if (data["Weight"]) supabaseData["weight"] = parseFloat(data["Weight"]);
+      if (data["BMI"]) supabaseData["bmi"] = parseFloat(data["BMI"]);
+      if (data["BodyFat"]) supabaseData["bodyFatPct"] = parseFloat(data["BodyFat"]);
+      if (data["FatMass"]) supabaseData["fatMass"] = parseFloat(data["FatMass"]);
+      if (data["MuscleMass"]) supabaseData["muscleMass"] = parseFloat(data["MuscleMass"]);
+      if (data["BMR"]) supabaseData["bmr"] = parseFloat(data["BMR"]);
+      if (data["VisceralFat"]) supabaseData["visceralFat"] = parseFloat(data["VisceralFat"]);
+      await updateBodyEntry(supabaseId, supabaseData as Parameters<typeof updateBodyEntry>[1]);
       setBodyStats((prev) => prev.map((b) => {
-        if ((b as unknown as Record<string, unknown>)["_row"] === row) return { ...b, ...data } as unknown as BodyStat;
+        if ((b as unknown as Record<string, unknown>)["_supabaseId"] === supabaseId) return { ...b, ...data } as unknown as BodyStat;
         return b;
       }));
       toast.success("Body record updated");
       setEditRecord(null);
       fetchFromGoogle();
-    } else {
-      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to update: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setEditLoading(false);
     }
   }
 
   async function handleDeleteConfirm() {
     if (!deleteRecord) return;
-    const row = deleteRecord["_row"] as number;
+    const supabaseId = deleteRecord["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot delete: missing record ID"); return; }
     setDeleteLoading(true);
-    const result = await deleteRow("Body", row);
-    setDeleteLoading(false);
-    if (result.success) {
-      setBodyStats((prev) => prev.filter((b) => (b as unknown as Record<string, unknown>)["_row"] !== row));
+    try {
+      await deleteBodyEntry(supabaseId);
+      setBodyStats((prev) => prev.filter((b) => (b as unknown as Record<string, unknown>)["_supabaseId"] !== supabaseId));
       toast.success("Body record deleted");
       setDeleteRecord(null);
-      fetchFromGoogle();
-    } else {
-      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 

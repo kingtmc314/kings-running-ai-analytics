@@ -9,7 +9,7 @@ import { parseDate, formatDateDisplay, SleepRecord } from "@/lib/runningData";
 import { toast } from "sonner";
 import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
-import { updateRow, deleteRow } from "@/lib/sheetsApi";
+// Supabase CRUD via DataContext
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
@@ -26,7 +26,7 @@ const SLEEP_EDIT_FIELDS: FieldDef[] = [
 ];
 
 export default function SleepTab() {
-  const { sleeps, setSleeps, fetchFromGoogle } = useData();
+  const { sleeps, setSleeps, fetchFromGoogle, updateSleepEntry, deleteSleepEntry } = useData();
 
   const [editRecord, setEditRecord]   = useState<Record<string, unknown> | null>(null);
   const [editLoading, setEditLoading] = useState(false);
@@ -59,36 +59,45 @@ export default function SleepTab() {
 
   async function handleEditSave(data: Record<string, string>) {
     if (!editRecord) return;
-    const row = editRecord["_row"] as number;
+    const supabaseId = editRecord["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot update: missing record ID"); return; }
     setEditLoading(true);
-    const result = await updateRow("Sleep", row, data);
-    setEditLoading(false);
-    if (result.success) {
+    try {
+      const supabaseData: Record<string, unknown> = {};
+      if (data["Date"]) supabaseData["date"] = data["Date"];
+      if (data["Score"]) supabaseData["score"] = parseFloat(data["Score"]);
+      if (data["Resting Heart Rate"]) supabaseData["resting_heart_rate"] = parseFloat(data["Resting Heart Rate"]);
+      if (data["Body Battery"]) supabaseData["body_battery_max"] = parseFloat(data["Body Battery"]);
+      if (data["Stress"]) supabaseData["stress_average"] = parseFloat(data["Stress"]);
+      await updateSleepEntry(supabaseId, supabaseData as Parameters<typeof updateSleepEntry>[1]);
       setSleeps((prev) => prev.map((s) => {
-        if ((s as unknown as Record<string, unknown>)["_row"] === row) return { ...s, ...data } as unknown as SleepRecord;
+        if ((s as unknown as Record<string, unknown>)["_supabaseId"] === supabaseId) return { ...s, ...data } as unknown as SleepRecord;
         return s;
       }));
       toast.success("Sleep record updated");
       setEditRecord(null);
       fetchFromGoogle();
-    } else {
-      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to update: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setEditLoading(false);
     }
   }
 
   async function handleDeleteConfirm() {
     if (!deleteRecord) return;
-    const row = deleteRecord["_row"] as number;
+    const supabaseId = deleteRecord["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot delete: missing record ID"); return; }
     setDeleteLoading(true);
-    const result = await deleteRow("Sleep", row);
-    setDeleteLoading(false);
-    if (result.success) {
-      setSleeps((prev) => prev.filter((s) => (s as unknown as Record<string, unknown>)["_row"] !== row));
+    try {
+      await deleteSleepEntry(supabaseId);
+      setSleeps((prev) => prev.filter((s) => (s as unknown as Record<string, unknown>)["_supabaseId"] !== supabaseId));
       toast.success("Sleep record deleted");
       setDeleteRecord(null);
-      fetchFromGoogle();
-    } else {
-      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 

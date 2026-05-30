@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
-import { updateRow, deleteRow } from "@/lib/sheetsApi";
+// Supabase CRUD via DataContext
 
 type SortKey = "Date" | "Distance" | "Time" | "Pace" | "HR" | "MaxHR" | "Cadence" | "Calories";
 type SortDir = "asc" | "desc";
@@ -57,7 +57,7 @@ const ACTIVITY_FIELDS: FieldDef[] = [
 // ─── Main Component ───────────────────────────────────────────
 
 export default function ActivitiesTab() {
-  const { logs, setLogs, latestRestingHR, fetchFromGoogle } = useData();
+  const { logs, setLogs, latestRestingHR, fetchFromGoogle, updateLog, deleteLog: deleteLogEntry } = useData();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [sortKey, setSortKey] = useState<SortKey>("Date");
@@ -142,13 +142,32 @@ export default function ActivitiesTab() {
   // ── Edit handler ──
   async function handleEditSave(data: Record<string, string>) {
     if (!editLog) return;
-    const row = editLog["_row"] as number;
+    const supabaseId = editLog["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot update: missing record ID"); return; }
     setEditLoading(true);
-    const result = await updateRow("Running Log", row, data);
-    setEditLoading(false);
-    if (result.success) {
+    try {
+      // Map display field names to Supabase column names
+      const supabaseData: Record<string, unknown> = {};
+      if (data["Date"]) supabaseData["date"] = data["Date"];
+      if (data["Running Type"]) supabaseData["running_type"] = data["Running Type"];
+      if (data["Running Shoes"]) supabaseData["running_shoes"] = data["Running Shoes"];
+      if (data["Distance (km)"]) supabaseData["distance_km"] = parseFloat(data["Distance (km)"]);
+      if (data["Hour"]) supabaseData["hour"] = parseInt(data["Hour"]);
+      if (data["Minutes"]) supabaseData["minutes"] = parseInt(data["Minutes"]);
+      if (data["Second"]) supabaseData["second"] = parseInt(data["Second"]);
+      if (data["Average Heart Rate"]) supabaseData["average_heart_rate"] = parseFloat(data["Average Heart Rate"]);
+      if (data["Maximum Heart Rate"]) supabaseData["maximum_heart_rate"] = parseFloat(data["Maximum Heart Rate"]);
+      if (data["Average Cadence"]) supabaseData["average_cadence"] = parseFloat(data["Average Cadence"]);
+      if (data["Max Cadence"]) supabaseData["max_cadence"] = parseFloat(data["Max Cadence"]);
+      if (data["Avg Stride Length (m)"]) supabaseData["avg_stride_length_m"] = parseFloat(data["Avg Stride Length (m)"]);
+      if (data["Calories"]) supabaseData["calories"] = parseFloat(data["Calories"]);
+      if (data["Temperature"]) supabaseData["temperature"] = parseFloat(data["Temperature"]);
+      if (data["Humidity"]) supabaseData["humidity"] = parseFloat(data["Humidity"]);
+      if (data["Wind Speed"]) supabaseData["wind_speed"] = parseFloat(data["Wind Speed"]);
+      if (data["Status"]) supabaseData["status"] = data["Status"];
+      await updateLog(supabaseId, supabaseData as Parameters<typeof updateLog>[1]);
       setLogs((prev) => prev.map((l) => {
-        if ((l as unknown as Record<string, unknown>)["_row"] === row) {
+        if ((l as unknown as Record<string, unknown>)["_supabaseId"] === supabaseId) {
           return { ...l, ...data } as unknown as RunLog;
         }
         return l;
@@ -156,25 +175,28 @@ export default function ActivitiesTab() {
       toast.success("Activity updated");
       setEditLog(null);
       fetchFromGoogle();
-    } else {
-      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to update: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setEditLoading(false);
     }
   }
 
   // ── Delete handler ──
   async function handleDeleteConfirm() {
     if (!deleteLog) return;
-    const row = deleteLog["_row"] as number;
+    const supabaseId = deleteLog["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot delete: missing record ID"); return; }
     setDeleteLoading(true);
-    const result = await deleteRow("Running Log", row);
-    setDeleteLoading(false);
-    if (result.success) {
-      setLogs((prev) => prev.filter((l) => (l as unknown as Record<string, unknown>)["_row"] !== row));
+    try {
+      await deleteLogEntry(supabaseId);
+      setLogs((prev) => prev.filter((l) => (l as unknown as Record<string, unknown>)["_supabaseId"] !== supabaseId));
       toast.success("Activity deleted");
       setDeleteLog(null);
-      fetchFromGoogle();
-    } else {
-      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 

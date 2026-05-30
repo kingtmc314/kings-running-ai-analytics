@@ -1,15 +1,18 @@
 // =============================================================
 // Log Data Tab — King's Running AI Analytics
+// v1.1.0 — Supabase Integration
 // Raw data viewer + Add Record forms for all six sheets
-// Field keys MUST match exact Google Sheet column names from API
 // =============================================================
 import { useState } from "react";
 import { RefreshCw, Database, Plus, X, Save, Loader2, Search } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import { formatDateDisplay } from "@/lib/runningData";
-import { addRow } from "@/lib/sheetsApi";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import type {
+  SupabaseRunLog, SupabaseShoe, SupabaseRace,
+  SupabaseBodyComposition, SupabaseSleepLog, SupabaseHeartRateLog,
+} from "@/lib/supabase";
 
 type Sheet = "running" | "shoes" | "races" | "body" | "sleep" | "hr";
 
@@ -33,102 +36,89 @@ const SHEETS: { id: Sheet; label: string }[] = [
   { id: "hr",      label: "Heart Rate" },
 ];
 
-// ─── Field definitions — EXACT Google Sheet column names ──────
-// Running Log: Date, Running Type, Running Shoes, Distance (km), Hour, Minutes, Second, Average Pace, Best Pace, Average Heart Rate, Maximum Heart Rate, Average Cadence, Max Cadence, Avg Stride Length (m), Avg Vertical Ratio, Vertical Oscillation (cm), Avg Ground Contact Time (ms), Calories, Temperature, Humidity, Wind Speed, Apparent Temp, Status
+// ─── Field definitions — Supabase column names ────────────────
 const RUNNING_FIELDS: FieldDef[] = [
-  { key: "Date", label: "Date", type: "date", required: true, hint: "Format: YYYY-MM-DD" },
-  { key: "Running Type", label: "Running Type", type: "select", required: true,
+  { key: "date", label: "Date", type: "date", required: true, hint: "Format: YYYY-MM-DD" },
+  { key: "running_type", label: "Running Type", type: "select", required: true,
     options: ["Easy","Tempo","Interval","Long","Race","Recovery","Fartlek","Sprint","Trail","Time Trial","Treadmill (Gym)"], hint: "Select the run intensity/type" },
-  { key: "Distance (km)", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10.5", hint: "Total distance in kilometers" },
-  { key: "Hour", label: "Hours", type: "number", placeholder: "0", hint: "Hours of running time" },
-  { key: "Minutes", label: "Minutes", type: "number", placeholder: "0", hint: "Minutes (0-59)" },
-  { key: "Second", label: "Seconds", type: "number", placeholder: "0", hint: "Seconds (0-59)" },
-  { key: "Average Heart Rate", label: "Avg HR (bpm)", type: "number", placeholder: "e.g. 155", hint: "Average heart rate during run" },
-  { key: "Maximum Heart Rate", label: "Max HR (bpm)", type: "number", placeholder: "e.g. 175", hint: "Peak heart rate during run" },
-  { key: "Running Shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name", hint: "Select from Shoe Locker" },
-  { key: "Calories", label: "Calories", type: "number", placeholder: "e.g. 650", hint: "Estimated calories burned" },
-  { key: "Average Cadence", label: "Avg Cadence (spm)", type: "number", placeholder: "e.g. 172", hint: "Steps per minute" },
-  { key: "Max Cadence", label: "Max Cadence (spm)", type: "number", placeholder: "e.g. 185", hint: "Maximum steps per minute" },
-  { key: "Avg Stride Length (m)", label: "Avg Stride Length (m)", type: "number", placeholder: "e.g. 1.25", hint: "Average stride in meters" },
-  { key: "Avg Vertical Ratio", label: "Avg Vertical Ratio", type: "number", placeholder: "e.g. 8.5", hint: "Vertical oscillation ratio" },
-  { key: "Vertical Oscillation (cm)", label: "Vertical Oscillation (cm)", type: "number", placeholder: "e.g. 9.2", hint: "Vertical bounce in centimeters" },
-  { key: "Avg Ground Contact Time (ms)", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220", hint: "Time foot contacts ground (milliseconds)" },
-  { key: "Average Pace", label: "Avg Pace (min/km)", type: "text", placeholder: "e.g. 5:30", hint: "Format: MM:SS" },
-  { key: "Best Pace", label: "Best Pace (min/km)", type: "text", placeholder: "e.g. 4:45", hint: "Format: MM:SS" },
-  { key: "Temperature", label: "Temperature (°C)", type: "number", placeholder: "e.g. 28", hint: "Ambient temperature" },
-  { key: "Apparent Temp", label: "Apparent Temp (°C)", type: "number", placeholder: "e.g. 32", hint: "Feels-like temperature" },
-  { key: "Humidity", label: "Humidity (%)", type: "number", placeholder: "e.g. 80", hint: "Relative humidity (0-100)" },
-  { key: "Wind Speed", label: "Wind Speed (km/h)", type: "number", placeholder: "e.g. 12", hint: "Wind speed in km/h" },
-  { key: "Status", label: "Status", type: "select", options: ["Completed", "Abandoned", "Paused"], hint: "Run completion status" },
+  { key: "distance_km", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10.5", hint: "Total distance in kilometers" },
+  { key: "hour", label: "Hours", type: "number", placeholder: "0", hint: "Hours of running time" },
+  { key: "minutes", label: "Minutes", type: "number", placeholder: "0", hint: "Minutes (0-59)" },
+  { key: "second", label: "Seconds", type: "number", placeholder: "0", hint: "Seconds (0-59)" },
+  { key: "average_heart_rate", label: "Avg HR (bpm)", type: "number", placeholder: "e.g. 155", hint: "Average heart rate during run" },
+  { key: "maximum_heart_rate", label: "Max HR (bpm)", type: "number", placeholder: "e.g. 175", hint: "Peak heart rate during run" },
+  { key: "running_shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name", hint: "Select from Shoe Locker" },
+  { key: "calories", label: "Calories", type: "number", placeholder: "e.g. 650", hint: "Estimated calories burned" },
+  { key: "average_cadence", label: "Avg Cadence (spm)", type: "number", placeholder: "e.g. 172", hint: "Steps per minute" },
+  { key: "max_cadence", label: "Max Cadence (spm)", type: "number", placeholder: "e.g. 185", hint: "Maximum steps per minute" },
+  { key: "avg_stride_length_m", label: "Avg Stride Length (m)", type: "number", placeholder: "e.g. 1.25", hint: "Average stride in meters" },
+  { key: "avg_vertical_ratio", label: "Avg Vertical Ratio", type: "number", placeholder: "e.g. 8.5", hint: "Vertical oscillation ratio" },
+  { key: "vertical_oscillation_cm", label: "Vertical Oscillation (cm)", type: "number", placeholder: "e.g. 9.2", hint: "Vertical bounce in centimeters" },
+  { key: "avg_ground_contact_time_ms", label: "Ground Contact Time (ms)", type: "number", placeholder: "e.g. 220", hint: "Time foot contacts ground (milliseconds)" },
+  { key: "average_pace", label: "Avg Pace (min/km)", type: "text", placeholder: "e.g. 5:30", hint: "Format: MM:SS" },
+  { key: "best_pace", label: "Best Pace (min/km)", type: "text", placeholder: "e.g. 4:45", hint: "Format: MM:SS" },
+  { key: "temperature", label: "Temperature (°C)", type: "number", placeholder: "e.g. 28", hint: "Ambient temperature" },
+  { key: "apparent_temp", label: "Apparent Temp (°C)", type: "number", placeholder: "e.g. 32", hint: "Feels-like temperature" },
+  { key: "humidity", label: "Humidity (%)", type: "number", placeholder: "e.g. 80", hint: "Relative humidity (0-100)" },
+  { key: "wind_speed", label: "Wind Speed (km/h)", type: "number", placeholder: "e.g. 12", hint: "Wind speed in km/h" },
+  { key: "status", label: "Status", type: "select", options: ["Completed", "Abandoned", "Paused"], hint: "Run completion status" },
+  { key: "notes", label: "Notes", type: "text", placeholder: "Optional notes" },
 ];
 
-// Shoes: Shoes, Shoes Brand, Shoes Price, Purchase Date, First Use, Retired Date, ItemPhoto, Shoes Name, Status, TOTAL, COST
 const SHOES_FIELDS: FieldDef[] = [
-  { key: "Shoes", label: "Shoes Name (Brand + Model)", type: "text", required: true, placeholder: "e.g. Adidas Adizero Adios Pro 4 White" },
-  { key: "Shoes Brand", label: "Brand", type: "text", required: true, placeholder: "e.g. Adidas" },
-  { key: "Status", label: "Status", type: "select", required: true, options: ["In Use", "Not Yet Opened", "Retired"] },
-  { key: "Shoes Price", label: "Price (HKD)", type: "number", placeholder: "e.g. 1800" },
-  { key: "Purchase Date", label: "Purchase Date", type: "date" },
-  { key: "First Use", label: "First Use Date", type: "date" },
-  { key: "Retired Date", label: "Retired Date", type: "date" },
-  { key: "ItemPhoto", label: "Photo URL", type: "text", placeholder: "https://..." },
+  { key: "shoes_name", label: "Shoes Name (Brand + Model)", type: "text", required: true, placeholder: "e.g. Adidas Adizero Adios Pro 4 White" },
+  { key: "brand", label: "Brand", type: "text", required: true, placeholder: "e.g. Adidas" },
+  { key: "model", label: "Model", type: "text", placeholder: "e.g. Adizero Adios Pro 4" },
+  { key: "status", label: "Status", type: "select", required: true, options: ["In Use", "Not Yet Opened", "Retired"] },
+  { key: "purchase_date", label: "Purchase Date", type: "date" },
+  { key: "retirement_date", label: "Retired Date", type: "date" },
+  { key: "initial_km", label: "Initial KM", type: "number", placeholder: "e.g. 0", hint: "KM on shoes before tracking" },
+  { key: "notes", label: "Notes", type: "text", placeholder: "Optional notes" },
 ];
 
-// Race: 賽事, 日期, 距離 (km), Reg, BIB No, 完成, PB?, Overall Place, Gender Group Place, Age Group Place
 const RACES_FIELDS: FieldDef[] = [
-  { key: "賽事", label: "Race Name", type: "text", required: true, placeholder: "e.g. HK 10K 2026" },
-  { key: "日期", label: "Date", type: "date", required: true },
-  { key: "距離 (km)", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10" },
-  { key: "完成", label: "Completed?", type: "select", options: ["true", "false"] },
-  { key: "Reg", label: "Registration", type: "text", placeholder: "e.g. Registered" },
-  { key: "BIB No", label: "BIB Number", type: "text", placeholder: "e.g. 12345" },
-  { key: "PB?", label: "Personal Best?", type: "select", options: ["true", "false"] },
-  { key: "Overall Place", label: "Overall Place", type: "text", placeholder: "e.g. 45" },
-  { key: "Gender Group Place", label: "Gender Group Place", type: "text", placeholder: "e.g. 8" },
-  { key: "Age Group Place", label: "Age Group Place", type: "text", placeholder: "e.g. 12" },
+  { key: "race_name", label: "Race Name", type: "text", required: true, placeholder: "e.g. HK 10K 2026" },
+  { key: "date", label: "Date", type: "date", required: true },
+  { key: "distance_km", label: "Distance (km)", type: "number", required: true, placeholder: "e.g. 10" },
+  { key: "location", label: "Location", type: "text", placeholder: "e.g. Hong Kong" },
+  { key: "registration", label: "Registration", type: "text", placeholder: "e.g. Registered" },
+  { key: "bib_no", label: "BIB No", type: "text", placeholder: "e.g. 12345" },
+  { key: "finish_time", label: "Finish Time (HH:MM:SS)", type: "text", placeholder: "e.g. 00:55:30" },
+  { key: "is_pb", label: "Is PB?", type: "select", options: ["false", "true"] },
+  { key: "overall_place", label: "Overall Place", type: "number", placeholder: "e.g. 150" },
+  { key: "gender_group_place", label: "Gender Group Place", type: "number", placeholder: "e.g. 80" },
+  { key: "age_group_place", label: "Age Group Place", type: "number", placeholder: "e.g. 20" },
+  { key: "running_shoes", label: "Running Shoes", type: "text", placeholder: "Brand + Model name" },
+  { key: "notes", label: "Notes", type: "text", placeholder: "Optional notes" },
 ];
 
-// Body: Date, Height, Weight, BMI, BodyFat, FatMass, FFM, MuscleMass, SMM, Protein, BoneMass, BodyWater, BodyWaterPercent, BMR, VisceralFat
 const BODY_FIELDS: FieldDef[] = [
-  { key: "Date", label: "Date", type: "date", required: true },
-  { key: "Weight", label: "Weight (kg)", type: "number", required: true, placeholder: "e.g. 72.5" },
-  { key: "Height", label: "Height (cm)", type: "number", placeholder: "e.g. 180" },
-  { key: "BMI", label: "BMI", type: "number", placeholder: "e.g. 22.4" },
-  { key: "BodyFat", label: "Body Fat (%)", type: "number", placeholder: "e.g. 18.5" },
-  { key: "FatMass", label: "Fat Mass (kg)", type: "number", placeholder: "e.g. 13.2" },
-  { key: "MuscleMass", label: "Muscle Mass (kg)", type: "number", placeholder: "e.g. 55.3" },
-  { key: "BMR", label: "BMR (kcal)", type: "number", placeholder: "e.g. 1750" },
-  { key: "VisceralFat", label: "Visceral Fat", type: "number", placeholder: "e.g. 8" },
-  { key: "FFM", label: "FFM (kg)", type: "number", placeholder: "e.g. 60" },
-  { key: "SMM", label: "SMM (kg)", type: "number", placeholder: "e.g. 30" },
-  { key: "Protein", label: "Protein (kg)", type: "number", placeholder: "e.g. 12" },
-  { key: "BoneMass", label: "Bone Mass (kg)", type: "number", placeholder: "e.g. 3.5" },
-  { key: "BodyWater", label: "Body Water (kg)", type: "number", placeholder: "e.g. 42" },
-  { key: "BodyWaterPercent", label: "Body Water (%)", type: "number", placeholder: "e.g. 60" },
+  { key: "date", label: "Date", type: "date", required: true },
+  { key: "weight", label: "Weight (kg)", type: "number", required: true, placeholder: "e.g. 72.5" },
+  { key: "bmi", label: "BMI", type: "number", placeholder: "e.g. 22.4" },
+  { key: "bodyFatPct", label: "Body Fat (%)", type: "number", placeholder: "e.g. 18.5" },
+  { key: "fatMass", label: "Fat Mass (kg)", type: "number", placeholder: "e.g. 13.2" },
+  { key: "muscleMass", label: "Muscle Mass (kg)", type: "number", placeholder: "e.g. 55.3" },
+  { key: "bmr", label: "BMR (kcal)", type: "number", placeholder: "e.g. 1750" },
+  { key: "visceralFat", label: "Visceral Fat", type: "number", placeholder: "e.g. 8" },
+  { key: "notes", label: "Notes", type: "text", placeholder: "Optional notes" },
 ];
 
-// Sleep: Date, Score, Resting Heart Rate, Body Battery, Pulse Ox, Respiration, Skin Temp Change, HRV Status, Quality, Duration, Sleep Need, Bedtime, Wake Time
 const SLEEP_FIELDS: FieldDef[] = [
-  { key: "Date", label: "Date", type: "date", required: true },
-  { key: "Score", label: "Sleep Score", type: "number", required: true, placeholder: "0–100" },
-  { key: "Resting Heart Rate", label: "Resting HR (bpm)", type: "number", placeholder: "e.g. 48" },
-  { key: "Body Battery", label: "Body Battery", type: "number", placeholder: "0–100" },
-  { key: "Pulse Ox", label: "Pulse Ox (%)", type: "text", placeholder: "e.g. 97" },
-  { key: "Respiration", label: "Respiration (brpm)", type: "number", placeholder: "e.g. 14" },
-  { key: "Skin Temp Change", label: "Skin Temp Change (°C)", type: "number", placeholder: "e.g. 0.5" },
-  { key: "HRV Status", label: "HRV Status", type: "select", options: ["Balanced", "Low", "High"] },
-  { key: "Quality", label: "Quality", type: "select", options: ["Excellent","Good","Fair","Poor"] },
-  { key: "Duration", label: "Duration (hours)", type: "number", placeholder: "e.g. 7.5" },
-  { key: "Sleep Need", label: "Sleep Need (hours)", type: "number", placeholder: "e.g. 8" },
-  { key: "Bedtime", label: "Bedtime (HH:MM)", type: "text", placeholder: "e.g. 23:00" },
-  { key: "Wake Time", label: "Wake Time (HH:MM)", type: "text", placeholder: "e.g. 06:30" },
+  { key: "date", label: "Date", type: "date", required: true },
+  { key: "score", label: "Sleep Score", type: "number", required: true, placeholder: "0–100" },
+  { key: "resting_heart_rate", label: "Resting HR (bpm)", type: "number", placeholder: "e.g. 48" },
+  { key: "body_battery_max", label: "Body Battery Max", type: "number", placeholder: "0–100" },
+  { key: "body_battery_min", label: "Body Battery Min", type: "number", placeholder: "0–100" },
+  { key: "stress_average", label: "Stress Average", type: "number", placeholder: "e.g. 25" },
+  { key: "notes", label: "Notes", type: "text", placeholder: "Optional notes" },
 ];
 
-// Heart Rate: Date, Resting, High
 const HR_FIELDS: FieldDef[] = [
-  { key: "Date", label: "Date", type: "date", required: true },
-  { key: "Resting", label: "Resting HR (bpm)", type: "number", required: true, placeholder: "e.g. 48" },
-  { key: "High", label: "High HR (bpm)", type: "number", placeholder: "e.g. 185" },
+  { key: "date", label: "Date", type: "date", required: true },
+  { key: "resting_heart_rate", label: "Resting HR (bpm)", type: "number", required: true, placeholder: "e.g. 48" },
+  { key: "max_heart_rate", label: "High HR (bpm)", type: "number", placeholder: "e.g. 185" },
+  { key: "source", label: "Source", type: "text", placeholder: "e.g. Garmin" },
 ];
 
 const SHEET_FIELDS: Record<Sheet, FieldDef[]> = {
@@ -140,13 +130,13 @@ const SHEET_FIELDS: Record<Sheet, FieldDef[]> = {
   hr: HR_FIELDS,
 };
 
-const SHEET_NAMES: Record<Sheet, string> = {
+const SHEET_LABELS: Record<Sheet, string> = {
   running: "Running Log",
   shoes: "Running Shoes",
   races: "Race",
-  body: "Body",
-  sleep: "Sleep",
-  hr: "Heart Rate",
+  body: "Body Composition",
+  sleep: "Sleep Log",
+  hr: "Heart Rate Log",
 };
 
 // ─── Add Record Modal ─────────────────────────────────────────
@@ -159,17 +149,20 @@ function AddRecordModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { shoes } = useData();
+  const {
+    shoes,
+    addLog, addShoe, addRaceEntry, addBodyEntry, addSleepEntry, addHREntry,
+  } = useData();
   const fields = SHEET_FIELDS[sheet];
-  
-  // Get non-retired shoes for Running Shoes dropdown (only for running sheet)
-  const availableShoes = sheet === "running" 
+
+  // Get non-retired shoes for Running Shoes dropdown
+  const availableShoes = sheet === "running"
     ? shoes
         .filter((s) => String(s["Status"] ?? "") !== "Retired")
         .map((s) => String(s["Shoes Name"] ?? s["Shoes"] ?? ""))
         .filter(Boolean)
     : [];
-  
+
   const [form, setForm] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     fields.forEach((f) => {
@@ -182,33 +175,50 @@ function AddRecordModal({
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    // Validate required fields
     const missing = fields.filter((f) => f.required && !form[f.key]?.trim());
     if (missing.length > 0) {
       toast.error(`Please fill in: ${missing.map((f) => f.label).join(", ")}`);
       return;
     }
     setSaving(true);
-    const data: Record<string, unknown> = {};
-    fields.forEach((f) => {
-      if (form[f.key] !== "") {
-        // Convert number fields to numbers
+    try {
+      // Build typed data object
+      const data: Record<string, unknown> = {};
+      fields.forEach((f) => {
+        const val = form[f.key];
+        if (val === "" || val === undefined) return;
         if (f.type === "number") {
-          const num = parseFloat(form[f.key]);
-          data[f.key] = isNaN(num) ? form[f.key] : num;
+          const num = parseFloat(val);
+          if (!isNaN(num)) data[f.key] = num;
+        } else if (f.key === "is_pb") {
+          data[f.key] = val === "true";
         } else {
-          data[f.key] = form[f.key];
+          data[f.key] = val;
         }
+      });
+
+      if (sheet === "running") {
+        await addLog(data as Omit<SupabaseRunLog, "id" | "created_at" | "updated_at">);
+      } else if (sheet === "shoes") {
+        await addShoe(data as Omit<SupabaseShoe, "id" | "created_at" | "updated_at">);
+      } else if (sheet === "races") {
+        await addRaceEntry(data as Omit<SupabaseRace, "id" | "created_at" | "updated_at">);
+      } else if (sheet === "body") {
+        await addBodyEntry(data as Omit<SupabaseBodyComposition, "id" | "createdAt" | "updatedAt">);
+      } else if (sheet === "sleep") {
+        await addSleepEntry(data as Omit<SupabaseSleepLog, "id" | "createdAt" | "updatedAt">);
+      } else if (sheet === "hr") {
+        await addHREntry(data as Omit<SupabaseHeartRateLog, "id" | "createdAt" | "updatedAt">);
       }
-    });
-    const result = await addRow(SHEET_NAMES[sheet], data);
-    setSaving(false);
-    if (result.success) {
-      toast.success("Record added successfully! Syncing data…");
+
+      toast.success("Record saved to Supabase!");
       onSaved();
       onClose();
-    } else {
-      toast.error(`Failed to add record: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      console.error("Save error:", err);
+      toast.error(`Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -220,7 +230,7 @@ function AddRecordModal({
           <div className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-primary" />
             <h3 className="font-display font-700 text-slate-800 text-lg">
-              Add {SHEET_NAMES[sheet]} Record
+              Add {SHEET_LABELS[sheet]} Record
             </h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
@@ -232,12 +242,12 @@ function AddRecordModal({
         <div className="overflow-y-auto flex-1 px-6 py-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {fields.map((f) => (
-              <div key={f.key} className={cn("flex flex-col gap-1.5")}>
+              <div key={f.key} className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-slate-700">
                   {f.label}
                   {f.required && <span className="text-red-400 ml-1">*</span>}
                 </label>
-                {f.key === "Running Shoes" && sheet === "running" ? (
+                {f.key === "running_shoes" && sheet === "running" ? (
                   <select
                     value={form[f.key] || ""}
                     onChange={(e) => setForm((prev) => ({ ...prev, [f.key]: e.target.value }))}
@@ -299,31 +309,28 @@ function AddRecordModal({
 
 // ─── Main Component ───────────────────────────────────────────
 export default function LogDataTab() {
-  const { logs, shoes, races, bodyStats, sleeps, heartRates, syncStatus, fetchFromGoogle } = useData();
+  const { logs, shoes, races, bodyStats, sleeps, heartRates, syncStatus, refreshData } = useData();
   const [sheet, setSheet] = useState<Sheet>("running");
   const [showAdd, setShowAdd] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Filter records based on search query
+
   const filterRecords = (records: Record<string, unknown>[], query: string): Record<string, unknown>[] => {
     if (!query.trim()) return records;
     const q = query.toLowerCase();
     return records.filter((r) =>
-      Object.values(r).some((v) =>
-        String(v ?? "").toLowerCase().includes(q)
-      )
+      Object.values(r).some((v) => String(v ?? "").toLowerCase().includes(q))
     );
   };
-  
-  const filteredLogs = filterRecords(logs, searchQuery);
-  const filteredShoes = filterRecords(shoes, searchQuery);
-  const filteredRaces = filterRecords(races, searchQuery);
-  const filteredBody = filterRecords(bodyStats, searchQuery);
-  const filteredSleep = filterRecords(sleeps, searchQuery);
-  const filteredHR = filterRecords(heartRates, searchQuery);
+
+  const filteredLogs = filterRecords(logs as unknown as Record<string, unknown>[], searchQuery);
+  const filteredShoes = filterRecords(shoes as unknown as Record<string, unknown>[], searchQuery);
+  const filteredRaces = filterRecords(races as unknown as Record<string, unknown>[], searchQuery);
+  const filteredBody = filterRecords(bodyStats as unknown as Record<string, unknown>[], searchQuery);
+  const filteredSleep = filterRecords(sleeps as unknown as Record<string, unknown>[], searchQuery);
+  const filteredHR = filterRecords(heartRates as unknown as Record<string, unknown>[], searchQuery);
 
   const handleSaved = () => {
-    setTimeout(() => fetchFromGoogle(), 800);
+    setTimeout(() => refreshData(), 500);
   };
 
   return (
@@ -332,7 +339,7 @@ export default function LogDataTab() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Database className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-600 text-slate-800 text-base">Raw Data from Google Sheets</h2>
+          <h2 className="font-display font-600 text-slate-800 text-base">Data from Supabase</h2>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -343,12 +350,12 @@ export default function LogDataTab() {
             Add Record
           </button>
           <button
-            onClick={() => fetchFromGoogle()}
+            onClick={() => refreshData()}
             disabled={syncStatus === "loading"}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm transition-colors disabled:opacity-60"
           >
             <RefreshCw className={cn("w-3.5 h-3.5", syncStatus === "loading" && "animate-spin")} />
-            {syncStatus === "loading" ? "Syncing…" : "Sync"}
+            {syncStatus === "loading" ? "Syncing…" : "Refresh"}
           </button>
         </div>
       </div>
@@ -459,7 +466,7 @@ function ShoesTable({ shoes }: { shoes: Record<string, unknown>[] }) {
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Name", "Brand", "Status", "Price", "Purchase Date", "First Use", "Retired Date"].map((h) => (
+          {["Shoes Name", "Brand", "Model", "Status", "Purchase Date", "Retired Date", "Initial KM"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -467,22 +474,13 @@ function ShoesTable({ shoes }: { shoes: Record<string, unknown>[] }) {
       <tbody>
         {shoes.map((r, i) => (
           <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td className="px-3 py-2 text-slate-700 whitespace-nowrap max-w-[180px] truncate">{String(r["Shoes"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-700">{String(r["Shoes Brand"] ?? "")}</td>
-            <td className="px-3 py-2">
-              <span className={cn(
-                "px-2 py-0.5 rounded-full text-xs font-medium",
-                String(r["Status"]) === "In Use" ? "bg-green-100 text-green-700" :
-                String(r["Status"]) === "Retired" ? "bg-red-100 text-red-700" :
-                "bg-slate-100 text-slate-600"
-              )}>
-                {String(r["Status"] ?? "")}
-              </span>
-            </td>
-            <td className="px-3 py-2 text-slate-500">{String(r["Shoes Price"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{String(r["Shoes Name"] ?? r["Shoes"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Shoes Brand"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Shoes Model"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-700">{String(r["Status"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDateDisplay(String(r["Purchase Date"] ?? ""))}</td>
-            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDateDisplay(String(r["First Use"] ?? ""))}</td>
             <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDateDisplay(String(r["Retired Date"] ?? ""))}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["initial_km"] ?? "")}</td>
           </tr>
         ))}
       </tbody>
@@ -495,7 +493,7 @@ function RacesTable({ races }: { races: Record<string, unknown>[] }) {
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Race Name", "Date", "Distance (km)", "Completed", "Overall Place", "Age Group Place"].map((h) => (
+          {["Race Name", "Date", "Distance (km)", "Finish Time", "Overall Place", "Age Group Place"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -503,12 +501,12 @@ function RacesTable({ races }: { races: Record<string, unknown>[] }) {
       <tbody>
         {races.map((r, i) => (
           <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-            <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{String((r as Record<string, unknown>)["賽事"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDateDisplay(String((r as Record<string, unknown>)["日期"] ?? ""))}</td>
-            <td className="px-3 py-2 text-slate-700">{String((r as Record<string, unknown>)["距離 (km)"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String((r as Record<string, unknown>)["完成"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String((r as Record<string, unknown>)["Overall Place"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String((r as Record<string, unknown>)["Age Group Place"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{String(r["賽事"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500 whitespace-nowrap">{formatDateDisplay(String(r["日期"] ?? ""))}</td>
+            <td className="px-3 py-2 text-slate-700">{String(r["距離 (km)"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Finish Time"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Overall Place"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["Age Group Place"] ?? "")}</td>
           </tr>
         ))}
       </tbody>
@@ -521,7 +519,7 @@ function BodyTable({ body }: { body: Record<string, unknown>[] }) {
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Date", "Weight (kg)", "Height (cm)", "BMI", "Body Fat (%)", "Fat Mass (kg)", "Muscle Mass (kg)", "BMR", "Visceral Fat"].map((h) => (
+          {["Date", "Weight (kg)", "BMI", "Body Fat (%)", "Fat Mass (kg)", "Muscle Mass (kg)", "BMR", "Visceral Fat"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -531,9 +529,8 @@ function BodyTable({ body }: { body: Record<string, unknown>[] }) {
           <tr key={i} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{formatDateDisplay(String(r["Date"] ?? ""))}</td>
             <td className="px-3 py-2 text-slate-700">{String(r["Weight"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String(r["Height"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["BMI"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String(r["BodyFat"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["BodyFat"] ?? r["Body Fat"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["FatMass"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["MuscleMass"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["BMR"] ?? "")}</td>
@@ -550,7 +547,7 @@ function SleepTable({ sleeps }: { sleeps: Record<string, unknown>[] }) {
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Date", "Score", "Resting HR", "Body Battery", "Pulse Ox", "Respiration", "Quality"].map((h) => (
+          {["Date", "Score", "Resting HR", "Body Battery Max", "Body Battery Min", "Stress Avg"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -562,9 +559,8 @@ function SleepTable({ sleeps }: { sleeps: Record<string, unknown>[] }) {
             <td className="px-3 py-2 text-slate-700">{String(r["Score"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Resting Heart Rate"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["Body Battery"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String(r["Pulse Ox"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String(r["Respiration"] ?? "")}</td>
-            <td className="px-3 py-2 text-slate-500">{String(r["Quality"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["body_battery_min"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["stress_average"] ?? "")}</td>
           </tr>
         ))}
       </tbody>
@@ -577,7 +573,7 @@ function HRTable({ hrs }: { hrs: Record<string, unknown>[] }) {
     <table className="w-full text-sm">
       <thead className="sticky top-0 bg-white z-10 shadow-sm">
         <tr className="border-b border-slate-200">
-          {["Date", "Resting HR (bpm)", "High HR (bpm)"].map((h) => (
+          {["Date", "Resting HR (bpm)", "High HR (bpm)", "Source"].map((h) => (
             <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
           ))}
         </tr>
@@ -588,6 +584,7 @@ function HRTable({ hrs }: { hrs: Record<string, unknown>[] }) {
             <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{formatDateDisplay(String(r["Date"] ?? ""))}</td>
             <td className="px-3 py-2 text-slate-700">{String(r["Resting"] ?? "")}</td>
             <td className="px-3 py-2 text-slate-500">{String(r["High"] ?? "")}</td>
+            <td className="px-3 py-2 text-slate-500">{String(r["source"] ?? "")}</td>
           </tr>
         ))}
       </tbody>

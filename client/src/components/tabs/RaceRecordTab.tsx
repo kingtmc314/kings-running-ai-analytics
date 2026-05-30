@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
-import { updateRow, deleteRow } from "@/lib/sheetsApi";
+// Supabase CRUD via DataContext
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -41,18 +41,20 @@ const SORT_COLUMNS: { key: SortKey; label: string; icon: React.ElementType }[] =
 ];
 
 const RACE_FIELDS: FieldDef[] = [
-  { key: "賽事",          label: "Race Name",       type: "text",   required: true },
-  { key: "日期",          label: "Date",            type: "date",   required: true },
-  { key: "距離 (km)",     label: "Distance (km)",   type: "number" },
-  { key: "完成",          label: "Completed",       type: "select", options: ["true", "false"] },
-  { key: "Overall Place", label: "Overall Place",   type: "text" },
-  { key: "Age Group Place", label: "Age Group Place", type: "text" },
+  { key: "race_name",       label: "Race Name",       type: "text",   required: true },
+  { key: "date",            label: "Date",            type: "date",   required: true },
+  { key: "distance_km",     label: "Distance (km)",   type: "number" },
+  { key: "finish_time",     label: "Finish Time (HH:MM:SS)", type: "text" },
+  { key: "overall_place",   label: "Overall Place",   type: "number" },
+  { key: "age_group_place", label: "Age Group Place", type: "number" },
+  { key: "location",        label: "Location",        type: "text" },
+  { key: "notes",           label: "Notes",           type: "text" },
 ];
 
 // ─── Component ────────────────────────────────────────────────
 
 export default function RaceRecordTab() {
-  const { processedRacesList, raceStats, races, setRaces, fetchFromGoogle } = useData();
+  const { processedRacesList, raceStats, races, setRaces, fetchFromGoogle, updateRaceEntry, deleteRaceEntry } = useData();
   const [filter, setFilter] = useState<"all" | "completed" | "upcoming">("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -140,13 +142,23 @@ export default function RaceRecordTab() {
   // ── Edit handler ──
   async function handleEditSave(data: Record<string, string>) {
     if (!editRace) return;
-    const row = editRace["_row"] as number;
+    const supabaseId = editRace["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot update: missing record ID"); return; }
     setEditLoading(true);
-    const result = await updateRow("Race", row, data);
-    setEditLoading(false);
-    if (result.success) {
+    try {
+      // Fields already use Supabase column names directly
+      const supabaseData: Record<string, unknown> = {};
+      if (data["race_name"]) supabaseData["race_name"] = data["race_name"];
+      if (data["date"]) supabaseData["date"] = data["date"];
+      if (data["distance_km"]) supabaseData["distance_km"] = parseFloat(data["distance_km"]);
+      if (data["finish_time"]) supabaseData["finish_time"] = data["finish_time"];
+      if (data["overall_place"]) supabaseData["overall_place"] = parseInt(data["overall_place"]);
+      if (data["age_group_place"]) supabaseData["age_group_place"] = parseInt(data["age_group_place"]);
+      if (data["location"]) supabaseData["location"] = data["location"];
+      if (data["notes"]) supabaseData["notes"] = data["notes"];
+      await updateRaceEntry(supabaseId, supabaseData as Parameters<typeof updateRaceEntry>[1]);
       setRaces((prev) => prev.map((r) => {
-        if ((r as unknown as Record<string, unknown>)["_row"] === row) {
+        if ((r as unknown as Record<string, unknown>)["_supabaseId"] === supabaseId) {
           return { ...r, ...data } as unknown as Race;
         }
         return r;
@@ -154,25 +166,28 @@ export default function RaceRecordTab() {
       toast.success("Race updated successfully");
       setEditRace(null);
       fetchFromGoogle();
-    } else {
-      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to update: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setEditLoading(false);
     }
   }
 
   // ── Delete handler ──
   async function handleDeleteConfirm() {
     if (!deleteRace) return;
-    const row = deleteRace["_row"] as number;
+    const supabaseId = deleteRace["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot delete: missing record ID"); return; }
     setDeleteLoading(true);
-    const result = await deleteRow("Race", row);
-    setDeleteLoading(false);
-    if (result.success) {
-      setRaces((prev) => prev.filter((r) => (r as unknown as Record<string, unknown>)["_row"] !== row));
+    try {
+      await deleteRaceEntry(supabaseId);
+      setRaces((prev) => prev.filter((r) => (r as unknown as Record<string, unknown>)["_supabaseId"] !== supabaseId));
       toast.success("Race deleted");
       setDeleteRace(null);
-      fetchFromGoogle();
-    } else {
-      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 

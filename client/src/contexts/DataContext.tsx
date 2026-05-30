@@ -1,14 +1,133 @@
 // =============================================================
 // King's Running AI Analytics — Global Data Context
+// v1.1.0 — Supabase Integration
 // =============================================================
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-  GOOGLE_SCRIPT_URL,
   RunLog, Shoe, Race, BodyStat, SleepRecord, HeartRateRecord,
   AIAnalysis, HRZones,
   calculateHRZoneRanges, generateAiAnalysis, parseDate, formatDate,
-  getShoeName, parsePrice, STATUS_ORDER, logToSeconds, secondsToHMS, paceToString,
+  STATUS_ORDER, logToSeconds,
 } from "@/lib/runningData";
+import {
+  supabase,
+  SupabaseRunLog, SupabaseShoe, SupabaseRace,
+  SupabaseBodyComposition, SupabaseSleepLog, SupabaseHeartRateLog,
+  fetchRunningLogs, fetchRunningShoes, fetchRaces,
+  fetchBodyComposition, fetchSleepLogs, fetchHeartRateLogs,
+  addRunningLog, updateRunningLog, deleteRunningLog,
+  addRunningShoe, updateRunningShoe, deleteRunningShoe,
+  addRace, updateRace, deleteRace,
+  addBodyComposition, updateBodyComposition, deleteBodyComposition,
+  addSleepLog, updateSleepLog, deleteSleepLog,
+  addHeartRateLog, updateHeartRateLog, deleteHeartRateLog,
+} from "@/lib/supabase";
+
+// ─── Mapping helpers: Supabase → legacy RunLog/Shoe/Race types ──
+
+function mapSupabaseRunLog(r: SupabaseRunLog): RunLog {
+  return {
+    _row: r.id,
+    Date: r.date,
+    "Distance (km)": String(r.distance_km ?? ""),
+    Hour: String(r.hour ?? "0"),
+    Minutes: String(r.minutes ?? "0"),
+    Second: String(r.second ?? "0"),
+    "Running Type": r.running_type ?? "",
+    "Average Heart Rate": String(r.average_heart_rate ?? ""),
+    "Maximum Heart Rate": String(r.maximum_heart_rate ?? ""),
+    "Running Shoes": r.running_shoes ?? "",
+    shoes_id: r.shoes_id,
+    "Average Pace": r.average_pace ?? "",
+    "Best Pace": r.best_pace ?? "",
+    "Average Cadence": String(r.average_cadence ?? ""),
+    "Max Cadence": String(r.max_cadence ?? ""),
+    Calories: String(r.calories ?? ""),
+    Temperature: String(r.temperature ?? ""),
+    Humidity: String(r.humidity ?? ""),
+    "Wind Speed": String(r.wind_speed ?? ""),
+    Notes: r.notes ?? "",
+    status: r.status ?? "",
+    _supabaseId: r.id,
+  } as unknown as RunLog;
+}
+
+function mapSupabaseShoe(s: SupabaseShoe): Shoe {
+  return {
+    _row: s.id,
+    Shoes: s.shoes_name,
+    "Shoes Name": s.shoes_name,
+    "Shoes Brand": s.brand ?? "",
+    "Shoes Model": s.model ?? "",
+    Status: s.status ?? "",
+    "Purchase Date": s.purchase_date ?? "",
+    "Retired Date": s.retirement_date ?? "",
+    initial_km: s.initial_km,
+    Notes: s.notes ?? "",
+    _supabaseId: s.id,
+  } as unknown as Shoe;
+}
+
+function mapSupabaseRace(r: SupabaseRace): Race {
+  return {
+    _row: r.id,
+    賽事: r.race_name,
+    日期: r.date,
+    "距離 (km)": String(r.distance_km ?? ""),
+    完成: r.finish_time ? true : false,
+    Location: r.location ?? "",
+    Registration: r.registration ?? "",
+    BibNo: r.bib_no ?? "",
+    IsPB: r.is_pb ?? false,
+    "Finish Time": r.finish_time ?? "",
+    "Overall Place": String(r.overall_place ?? ""),
+    "Age Group Place": String(r.age_group_place ?? ""),
+    "Gender Group Place": String(r.gender_group_place ?? ""),
+    "Running Shoes": r.running_shoes ?? "",
+    shoes_id: r.shoes_id,
+    Notes: r.notes ?? "",
+    _supabaseId: r.id,
+  } as unknown as Race;
+}
+
+function mapSupabaseBody(b: SupabaseBodyComposition): BodyStat {
+  return {
+    _row: b.id,
+    Date: b.date,
+    Weight: String(b.weight ?? ""),
+    BMI: String(b.bmi ?? ""),
+    BodyFat: String(b.bodyFatPct ?? ""),
+    "Body Fat": String(b.bodyFatPct ?? ""),
+    MuscleMass: String(b.muscleMass ?? ""),
+    FatMass: String(b.fatMass ?? ""),
+    VisceralFat: String(b.visceralFat ?? ""),
+    BMR: String(b.bmr ?? ""),
+    Notes: b.notes ?? "",
+    _supabaseId: b.id,
+  } as unknown as BodyStat;
+}
+
+function mapSupabaseSleep(s: SupabaseSleepLog): SleepRecord {
+  return {
+    _row: s.id,
+    Date: s.date,
+    Score: String(s.score ?? ""),
+    "Resting Heart Rate": String(s.resting_heart_rate ?? ""),
+    "Body Battery": String(s.body_battery_max ?? ""),
+    Notes: s.notes ?? "",
+    _supabaseId: s.id,
+  } as unknown as SleepRecord;
+}
+
+function mapSupabaseHR(h: SupabaseHeartRateLog): HeartRateRecord {
+  return {
+    _row: h.id,
+    Date: h.date,
+    Resting: String(h.resting_heart_rate ?? ""),
+    High: String(h.max_heart_rate ?? ""),
+    _supabaseId: h.id,
+  } as unknown as HeartRateRecord;
+}
 
 // ─── Context Shape ────────────────────────────────────────────
 
@@ -21,10 +140,19 @@ interface DataContextValue {
   sleeps: SleepRecord[];
   heartRates: HeartRateRecord[];
 
+  // Raw Supabase data (for components that need exact Supabase types)
+  supabaseLogs: SupabaseRunLog[];
+  supabaseShoes: SupabaseShoe[];
+  supabaseRaces: SupabaseRace[];
+  supabaseBodyStats: SupabaseBodyComposition[];
+  supabaseSleeps: SupabaseSleepLog[];
+  supabaseHeartRates: SupabaseHeartRateLog[];
+
   // Sync
   syncStatus: "idle" | "loading" | "success" | "error";
   errorMessage: string;
-  fetchFromGoogle: () => Promise<void>;
+  fetchFromGoogle: () => Promise<void>; // kept for compatibility, now fetches from Supabase
+  refreshData: () => Promise<void>;
 
   // Derived
   latestRestingHR: number;
@@ -39,6 +167,36 @@ interface DataContextValue {
   setBodyStats: React.Dispatch<React.SetStateAction<BodyStat[]>>;
   setSleeps: React.Dispatch<React.SetStateAction<SleepRecord[]>>;
   setHeartRates: React.Dispatch<React.SetStateAction<HeartRateRecord[]>>;
+
+  // Supabase CRUD — Running Logs
+  addLog: (log: Omit<SupabaseRunLog, "id" | "created_at" | "updated_at">) => Promise<void>;
+  updateLog: (id: number, log: Partial<SupabaseRunLog>) => Promise<void>;
+  deleteLog: (id: number) => Promise<void>;
+
+  // Supabase CRUD — Running Shoes
+  addShoe: (shoe: Omit<SupabaseShoe, "id" | "created_at" | "updated_at">) => Promise<void>;
+  updateShoe: (id: number, shoe: Partial<SupabaseShoe>) => Promise<void>;
+  deleteShoe: (id: number) => Promise<void>;
+
+  // Supabase CRUD — Races
+  addRaceEntry: (race: Omit<SupabaseRace, "id" | "created_at" | "updated_at">) => Promise<void>;
+  updateRaceEntry: (id: number, race: Partial<SupabaseRace>) => Promise<void>;
+  deleteRaceEntry: (id: number) => Promise<void>;
+
+  // Supabase CRUD — Body Composition
+  addBodyEntry: (body: Omit<SupabaseBodyComposition, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateBodyEntry: (id: number, body: Partial<SupabaseBodyComposition>) => Promise<void>;
+  deleteBodyEntry: (id: number) => Promise<void>;
+
+  // Supabase CRUD — Sleep Logs
+  addSleepEntry: (sleep: Omit<SupabaseSleepLog, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateSleepEntry: (id: number, sleep: Partial<SupabaseSleepLog>) => Promise<void>;
+  deleteSleepEntry: (id: number) => Promise<void>;
+
+  // Supabase CRUD — Heart Rate Logs
+  addHREntry: (hr: Omit<SupabaseHeartRateLog, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  updateHREntry: (id: number, hr: Partial<SupabaseHeartRateLog>) => Promise<void>;
+  deleteHREntry: (id: number) => Promise<void>;
 
   // Computed helpers
   processedShoes: (Shoe & { totalDist: number; usageCount: number; parsedPrice: number; costPerKm: number; shoesName: string })[];
@@ -59,42 +217,151 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [bodyStats, setBodyStats] = useState<BodyStat[]>([]);
   const [sleeps, setSleeps] = useState<SleepRecord[]>([]);
   const [heartRates, setHeartRates] = useState<HeartRateRecord[]>([]);
+
+  const [supabaseLogs, setSupabaseLogs] = useState<SupabaseRunLog[]>([]);
+  const [supabaseShoes, setSupabaseShoes] = useState<SupabaseShoe[]>([]);
+  const [supabaseRaces, setSupabaseRaces] = useState<SupabaseRace[]>([]);
+  const [supabaseBodyStats, setSupabaseBodyStats] = useState<SupabaseBodyComposition[]>([]);
+  const [supabaseSleeps, setSupabaseSleeps] = useState<SupabaseSleepLog[]>([]);
+  const [supabaseHeartRates, setSupabaseHeartRates] = useState<SupabaseHeartRateLog[]>([]);
+
   const [syncStatus, setSyncStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
 
-  const fetchFromGoogle = useCallback(async () => {
+  const refreshData = useCallback(async () => {
     setSyncStatus("loading");
     setErrorMessage("");
-    let cleanUrl = GOOGLE_SCRIPT_URL.trim();
-    if (!cleanUrl.endsWith("/exec")) cleanUrl = `${cleanUrl}/exec`;
     try {
-      const [logRes, shoeRes, raceRes, bodyRes, sleepRes, hrRes] = await Promise.all([
-        fetch(`${cleanUrl}?sheet=Running Log&t=${Date.now()}`),
-        fetch(`${cleanUrl}?sheet=Running Shoes&t=${Date.now()}`),
-        fetch(`${cleanUrl}?sheet=Race&t=${Date.now()}`),
-        fetch(`${cleanUrl}?sheet=Body&t=${Date.now()}`),
-        fetch(`${cleanUrl}?sheet=Sleep&t=${Date.now()}`).catch(() => ({ json: () => [] })),
-        fetch(`${cleanUrl}?sheet=Heart Rate&t=${Date.now()}`).catch(() => ({ json: () => [] })),
-      ]);
       const [logData, shoeData, raceData, bodyData, sleepData, hrData] = await Promise.all([
-        logRes.json(), shoeRes.json(), raceRes.json(), bodyRes.json(), sleepRes.json(), hrRes.json(),
+        fetchRunningLogs(),
+        fetchRunningShoes(),
+        fetchRaces(),
+        fetchBodyComposition(),
+        fetchSleepLogs(),
+        fetchHeartRateLogs(),
       ]);
-      if (Array.isArray(logData)) setLogs(logData.map((l: Record<string, unknown>, i: number) => ({ ...l, _row: i + 2 } as unknown as RunLog)));
-      if (Array.isArray(shoeData)) setShoes(shoeData.map((s: Record<string, unknown>, i: number) => ({ ...s, _row: i + 2 } as unknown as Shoe)));
-      if (Array.isArray(raceData)) setRaces(raceData.map((r: Record<string, unknown>, i: number) => ({ ...r, _row: i + 2 } as unknown as Race)));
-      if (Array.isArray(bodyData)) setBodyStats(bodyData.map((b: Record<string, unknown>, i: number) => ({ ...b, _row: i + 2 } as unknown as BodyStat)));
-      if (Array.isArray(sleepData)) setSleeps(sleepData.map((s: Record<string, unknown>, i: number) => ({ ...s, _row: i + 2 } as unknown as SleepRecord)));
-      if (Array.isArray(hrData)) setHeartRates(hrData.map((h: Record<string, unknown>, i: number) => ({ ...h, _row: i + 2 } as unknown as HeartRateRecord)));
+
+      setSupabaseLogs(logData);
+      setSupabaseShoes(shoeData);
+      setSupabaseRaces(raceData);
+      setSupabaseBodyStats(bodyData);
+      setSupabaseSleeps(sleepData);
+      setSupabaseHeartRates(hrData);
+
+      setLogs(logData.map(mapSupabaseRunLog));
+      setShoes(shoeData.map(mapSupabaseShoe));
+      setRaces(raceData.map(mapSupabaseRace));
+      setBodyStats(bodyData.map(mapSupabaseBody));
+      setSleeps(sleepData.map(mapSupabaseSleep));
+      setHeartRates(hrData.map(mapSupabaseHR));
+
       setSyncStatus("success");
     } catch (err) {
-      console.error(err);
+      console.error("Supabase fetch error:", err);
       setSyncStatus("error");
-      setErrorMessage("Failed to fetch. Check URL.");
+      setErrorMessage(err instanceof Error ? err.message : "Failed to fetch from Supabase.");
     }
   }, []);
 
-  useEffect(() => { fetchFromGoogle(); }, [fetchFromGoogle]);
+  // fetchFromGoogle kept for compatibility — now fetches from Supabase
+  const fetchFromGoogle = refreshData;
+
+  useEffect(() => { refreshData(); }, [refreshData]);
+
+  // ─── CRUD Operations ─────────────────────────────────────────
+
+  const addLog = useCallback(async (log: Omit<SupabaseRunLog, "id" | "created_at" | "updated_at">) => {
+    await addRunningLog(log);
+    await refreshData();
+  }, [refreshData]);
+
+  const updateLog = useCallback(async (id: number, log: Partial<SupabaseRunLog>) => {
+    await updateRunningLog(id, log);
+    await refreshData();
+  }, [refreshData]);
+
+  const deleteLog = useCallback(async (id: number) => {
+    await deleteRunningLog(id);
+    await refreshData();
+  }, [refreshData]);
+
+  const addShoe = useCallback(async (shoe: Omit<SupabaseShoe, "id" | "created_at" | "updated_at">) => {
+    await addRunningShoe(shoe);
+    await refreshData();
+  }, [refreshData]);
+
+  const updateShoe = useCallback(async (id: number, shoe: Partial<SupabaseShoe>) => {
+    await updateRunningShoe(id, shoe);
+    await refreshData();
+  }, [refreshData]);
+
+  const deleteShoe = useCallback(async (id: number) => {
+    await deleteRunningShoe(id);
+    await refreshData();
+  }, [refreshData]);
+
+  const addRaceEntry = useCallback(async (race: Omit<SupabaseRace, "id" | "created_at" | "updated_at">) => {
+    await addRace(race);
+    await refreshData();
+  }, [refreshData]);
+
+  const updateRaceEntry = useCallback(async (id: number, race: Partial<SupabaseRace>) => {
+    await updateRace(id, race);
+    await refreshData();
+  }, [refreshData]);
+
+  const deleteRaceEntry = useCallback(async (id: number) => {
+    await deleteRace(id);
+    await refreshData();
+  }, [refreshData]);
+
+  const addBodyEntry = useCallback(async (body: Omit<SupabaseBodyComposition, "id" | "createdAt" | "updatedAt">) => {
+    await addBodyComposition(body);
+    await refreshData();
+  }, [refreshData]);
+
+  const updateBodyEntry = useCallback(async (id: number, body: Partial<SupabaseBodyComposition>) => {
+    await updateBodyComposition(id, body);
+    await refreshData();
+  }, [refreshData]);
+
+  const deleteBodyEntry = useCallback(async (id: number) => {
+    await deleteBodyComposition(id);
+    await refreshData();
+  }, [refreshData]);
+
+  const addSleepEntry = useCallback(async (sleep: Omit<SupabaseSleepLog, "id" | "createdAt" | "updatedAt">) => {
+    await addSleepLog(sleep);
+    await refreshData();
+  }, [refreshData]);
+
+  const updateSleepEntry = useCallback(async (id: number, sleep: Partial<SupabaseSleepLog>) => {
+    await updateSleepLog(id, sleep);
+    await refreshData();
+  }, [refreshData]);
+
+  const deleteSleepEntry = useCallback(async (id: number) => {
+    await deleteSleepLog(id);
+    await refreshData();
+  }, [refreshData]);
+
+  const addHREntry = useCallback(async (hr: Omit<SupabaseHeartRateLog, "id" | "createdAt" | "updatedAt">) => {
+    await addHeartRateLog(hr);
+    await refreshData();
+  }, [refreshData]);
+
+  const updateHREntry = useCallback(async (id: number, hr: Partial<SupabaseHeartRateLog>) => {
+    await updateHeartRateLog(id, hr);
+    await refreshData();
+  }, [refreshData]);
+
+  const deleteHREntry = useCallback(async (id: number) => {
+    await deleteHeartRateLog(id);
+    await refreshData();
+  }, [refreshData]);
+
+  // ─── Derived Data ─────────────────────────────────────────────
 
   const latestRestingHR = useMemo(() => {
     const sorted = [...heartRates].sort(
@@ -114,51 +381,41 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (syncStatus === "success") generateAI();
   }, [syncStatus, generateAI]);
 
-  // Processed shoes
-  // Match by "Shoes Name" (full brand+name string) which is what Running Log uses in "Running Shoes".
-  // Also use the sheet's pre-computed TOTAL (km) and COST (cost/km) fields when available.
+  // Processed shoes — use Supabase field names
   const processedShoes = useMemo(() => {
-    return [...shoes].map((shoe) => {
-      const raw = shoe as unknown as Record<string, unknown>;
-      // "Shoes Name" is the full "Brand Model Color" string used in the log
-      const shoesName = String(raw["Shoes Name"] || raw["Shoes"] || "");
-      // Use sheet-computed TOTAL if present, otherwise compute from logs
-      const sheetTotal = parseFloat(String(raw["TOTAL"] ?? ""));
-      const totalDist = !isNaN(sheetTotal) && sheetTotal > 0
-        ? sheetTotal
-        : logs
-            .filter((l) => getShoeName(l) === shoesName)
-            .reduce((acc, l) => acc + (parseFloat(String((l as unknown as Record<string, unknown>)["Distance (km)"] ?? "0")) || 0), 0);
-      const usageCount = logs.filter((l) => getShoeName(l) === shoesName).length;
-      const parsedPrice = parsePrice(String(raw["Shoes Price"] ?? ""));
-      // Use sheet-computed COST if present
-      const sheetCost = parseFloat(String(raw["COST"] ?? ""));
-      const costPerKm = !isNaN(sheetCost) && sheetCost > 0
-        ? sheetCost
-        : totalDist > 0 && parsedPrice > 0 ? parsedPrice / totalDist : 0;
-      return { ...shoe, totalDist, usageCount, parsedPrice, costPerKm, shoesName };
+    return [...supabaseShoes].map((shoe) => {
+      const shoesName = shoe.shoes_name || "";
+      // Count km from running_logs
+      const totalDist = supabaseLogs
+        .filter((l) => l.running_shoes === shoesName || l.shoes_id === shoe.id)
+        .reduce((acc, l) => acc + (l.distance_km || 0), 0) + (shoe.initial_km || 0);
+      const usageCount = supabaseLogs.filter((l) => l.running_shoes === shoesName || l.shoes_id === shoe.id).length;
+      const parsedPrice = 0; // price not in Supabase schema yet
+      const costPerKm = 0;
+      // Map to legacy Shoe type for compatibility
+      const legacyShoe = mapSupabaseShoe(shoe);
+      return { ...legacyShoe, totalDist, usageCount, parsedPrice, costPerKm, shoesName };
     }).sort((a, b) => {
-      const aRaw = a as unknown as Record<string, string>;
-      const bRaw = b as unknown as Record<string, string>;
-      return (STATUS_ORDER[aRaw["Status"] || ""] || 99) - (STATUS_ORDER[bRaw["Status"] || ""] || 99);
+      return (STATUS_ORDER[a.Status || ""] || 99) - (STATUS_ORDER[b.Status || ""] || 99);
     });
-  }, [shoes, logs]);
+  }, [supabaseShoes, supabaseLogs]);
 
-  // Processed races
+  // Processed races — use Supabase field names
   const processedRacesList = useMemo(() => {
-    return races.map((race) => {
-      const matchedLog = logs.find(
+    return supabaseRaces.map((race) => {
+      const matchedLog = supabaseLogs.find(
         (l) =>
-          formatDate(parseDate(l.Date) || new Date()) === formatDate(parseDate(race.日期) || new Date()) &&
-          l["Running Type"] === "Race"
+          formatDate(parseDate(l.date) || new Date()) === formatDate(parseDate(race.date) || new Date()) &&
+          l.running_type === "Race"
       );
-      const logData = matchedLog || {};
-      const timeSec = matchedLog ? logToSeconds(matchedLog) : 0;
-      const dist = parseFloat(race["距離 (km)"] || "0");
+      const logData = matchedLog ? mapSupabaseRunLog(matchedLog) : {};
+      const timeSec = matchedLog ? (matchedLog.hour || 0) * 3600 + (matchedLog.minutes || 0) * 60 + (matchedLog.second || 0) : 0;
+      const dist = race.distance_km || 0;
       const paceSec = timeSec > 0 && dist > 0 ? (timeSec / 60) / dist * 60 : 0;
-      return { ...race, logData, timeSec, paceSec };
+      const legacyRace = mapSupabaseRace(race);
+      return { ...legacyRace, logData, timeSec, paceSec };
     });
-  }, [races, logs]);
+  }, [supabaseRaces, supabaseLogs]);
 
   // Race stats / PBs
   const raceStats = useMemo(() => {
@@ -188,9 +445,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   return (
     <DataContext.Provider value={{
       logs, shoes, races, bodyStats, sleeps, heartRates,
-      syncStatus, errorMessage, fetchFromGoogle,
+      supabaseLogs, supabaseShoes, supabaseRaces, supabaseBodyStats, supabaseSleeps, supabaseHeartRates,
+      syncStatus, errorMessage, fetchFromGoogle, refreshData,
       latestRestingHR, hrZones, aiAnalysis, generateAI,
       setLogs, setShoes, setRaces, setBodyStats, setSleeps, setHeartRates,
+      addLog, updateLog, deleteLog,
+      addShoe, updateShoe, deleteShoe,
+      addRaceEntry, updateRaceEntry, deleteRaceEntry,
+      addBodyEntry, updateBodyEntry, deleteBodyEntry,
+      addSleepEntry, updateSleepEntry, deleteSleepEntry,
+      addHREntry, updateHREntry, deleteHREntry,
       processedShoes, processedRacesList, raceStats,
     }}>
       {children}

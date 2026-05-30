@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import EditRecordModal, { FieldDef } from "@/components/EditRecordModal";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
-import { updateRow, deleteRow } from "@/lib/sheetsApi";
+// Supabase CRUD via DataContext
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -186,7 +186,7 @@ const SHOE_FIELDS: FieldDef[] = [
 // ─── Main Component ───────────────────────────────────────────
 
 export default function ShoeLockerTab() {
-  const { processedShoes, setShoes, fetchFromGoogle } = useData();
+  const { processedShoes, setShoes, fetchFromGoogle, updateShoe, deleteShoe: deleteShoeEntry } = useData();
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortKey, setSortKey] = useState<SortKey>("status");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -202,36 +202,46 @@ export default function ShoeLockerTab() {
 
   async function handleEditSave(data: Record<string, string>) {
     if (!editShoe) return;
-    const row = editShoe["_row"] as number;
+    const supabaseId = editShoe["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot update: missing record ID"); return; }
     setEditLoading(true);
-    const result = await updateRow("Running Shoes", row, data);
-    setEditLoading(false);
-    if (result.success) {
+    try {
+      // Map display field names to Supabase column names
+      const supabaseData: Record<string, unknown> = {};
+      if (data["Shoes Name"]) supabaseData["shoes_name"] = data["Shoes Name"];
+      if (data["Shoes Brand"]) supabaseData["brand"] = data["Shoes Brand"];
+      if (data["Status"]) supabaseData["status"] = data["Status"];
+      if (data["Purchase Date"]) supabaseData["purchase_date"] = data["Purchase Date"];
+      if (data["Retired Date"]) supabaseData["retirement_date"] = data["Retired Date"];
+      await updateShoe(supabaseId, supabaseData as Parameters<typeof updateShoe>[1]);
       setShoes((prev) => prev.map((s) => {
-        if ((s as unknown as Record<string, unknown>)["_row"] === row) return { ...s, ...data } as unknown as Shoe;
+        if ((s as unknown as Record<string, unknown>)["_supabaseId"] === supabaseId) return { ...s, ...data } as unknown as Shoe;
         return s;
       }));
       toast.success("Shoe updated successfully");
       setEditShoe(null);
       fetchFromGoogle();
-    } else {
-      toast.error(`Failed to update: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to update: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setEditLoading(false);
     }
   }
 
   async function handleDeleteConfirm() {
     if (!deleteShoe) return;
-    const row = deleteShoe["_row"] as number;
+    const supabaseId = deleteShoe["_supabaseId"] as number;
+    if (!supabaseId) { toast.error("Cannot delete: missing record ID"); return; }
     setDeleteLoading(true);
-    const result = await deleteRow("Running Shoes", row);
-    setDeleteLoading(false);
-    if (result.success) {
-      setShoes((prev) => prev.filter((s) => (s as unknown as Record<string, unknown>)["_row"] !== row));
+    try {
+      await deleteShoeEntry(supabaseId);
+      setShoes((prev) => prev.filter((s) => (s as unknown as Record<string, unknown>)["_supabaseId"] !== supabaseId));
       toast.success("Shoe deleted");
       setDeleteShoe(null);
-      fetchFromGoogle();
-    } else {
-      toast.error(`Failed to delete: ${result.error || "Unknown error"}`);
+    } catch (err) {
+      toast.error(`Failed to delete: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDeleteLoading(false);
     }
   }
 

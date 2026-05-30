@@ -148,8 +148,8 @@ export default function Dashboard() {
           })}
         </nav>
 
-        {/* Sync button */}
-        <div className="p-3 border-t border-sidebar-border">
+        {/* Sync button + Version */}
+        <div className="p-3 border-t border-sidebar-border space-y-2">
           <button
             onClick={() => fetchFromGoogle()}
             disabled={syncStatus === "loading"}
@@ -158,15 +158,18 @@ export default function Dashboard() {
               "bg-sidebar-accent hover:bg-primary/20 text-muted-foreground hover:text-primary",
               syncStatus === "loading" && "opacity-60 cursor-not-allowed"
             )}
-            title={!sidebarOpen ? "Sync Data" : undefined}
+            title={!sidebarOpen ? "Refresh from Supabase" : undefined}
           >
             <RefreshCw className={cn("w-3.5 h-3.5 shrink-0", syncStatus === "loading" && "animate-spin")} />
             {sidebarOpen && (
               <span>
-                {syncStatus === "loading" ? "Syncing…" : syncStatus === "success" ? "Synced" : syncStatus === "error" ? "Retry Sync" : "Sync Data"}
+                {syncStatus === "loading" ? "Syncing…" : syncStatus === "success" ? "Synced" : syncStatus === "error" ? "Retry" : "Refresh"}
               </span>
             )}
           </button>
+          {sidebarOpen && (
+            <p className="text-center text-[10px] text-muted-foreground/50 select-none">v1.1.0 · Supabase</p>
+          )}
         </div>
       </aside>
 
