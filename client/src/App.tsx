@@ -6,23 +6,18 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { DataProvider } from "./contexts/DataContext";
-import { AuthGuard } from "./components/AuthGuard";
 import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { Route, Switch } from "wouter";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
       <Route path="/">
         {() => (
-          <AuthGuard>
-            <DataProvider>
-              <Dashboard />
-            </DataProvider>
-          </AuthGuard>
+          <DataProvider>
+            <Dashboard />
+          </DataProvider>
         )}
       </Route>
       <Route component={NotFound} />

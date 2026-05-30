@@ -64,4 +64,4 @@
 - [x] All 16 tests pass
 - [x] Production build succeeds (dist/public + api/server.js)
 - [x] Update version to v1.3.0
-- [ ] Save checkpoint and push to GitHub
+- [x] Save checkpoint and push to GitHub

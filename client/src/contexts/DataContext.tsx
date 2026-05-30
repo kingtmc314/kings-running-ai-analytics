@@ -74,7 +74,7 @@ function mapSupabaseRace(r: SupabaseRace): Race {
     賽事: r.race_name,
     日期: r.date,
     "距離 (km)": String(r.distance_km ?? ""),
-    完成: r.finish_time ? true : false,
+    完成: r.finish_time === "True",
     Location: r.location ?? "",
     Registration: r.registration ?? "",
     BibNo: r.bib_no ?? "",
@@ -426,16 +426,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // Race stats / PBs
   const raceStats = useMemo(() => {
     const distMap: Record<string, { race: Race; timeSec: number; paceSec: number; logData: Partial<RunLog> }> = {};
-    const DIST_KEYS: Record<string, string> = {
-      "5": "5K", "5.0": "5K",
-      "10": "10K", "10.0": "10K",
-      "21.0975": "Half Marathon", "21.1": "Half Marathon", "21": "Half Marathon",
-      "42.195": "Marathon", "42.2": "Marathon", "42": "Marathon",
-    };
+    // Use numeric range matching to handle floating point variations (e.g. 21.098, 21.0975, 21.1)
+    function getDistKey(distKm: number): string | null {
+      if (distKm >= 4.5 && distKm <= 5.5) return "5K";
+      if (distKm >= 9.5 && distKm <= 10.5) return "10K";
+      if (distKm >= 20.5 && distKm <= 22.0) return "Half Marathon";
+      if (distKm >= 41.5 && distKm <= 43.0) return "Marathon";
+      return null;
+    }
     processedRacesList.forEach((race) => {
       if (!race.timeSec || !race.完成) return;
-      const rawDist = String(race["距離 (km)"] || "").trim();
-      const distKey = DIST_KEYS[rawDist];
+      const distNum = parseFloat(String(race["距離 (km)"] || "0"));
+      const distKey = getDistKey(distNum);
       if (!distKey) return;
       if (!distMap[distKey] || race.timeSec < distMap[distKey].timeSec) {
         distMap[distKey] = { race, timeSec: race.timeSec, paceSec: race.paceSec, logData: race.logData };
