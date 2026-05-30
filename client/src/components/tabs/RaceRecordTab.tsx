@@ -98,14 +98,25 @@ export default function RaceRecordTab() {
     else { setSortKey(key); setSortDir("desc"); }
   }
 
+  const completedList = useMemo(() => processedRacesList.filter(r => {
+    const d = parseDate(r.日期);
+    return r.完成 || (d != null && d < now);
+  }), [processedRacesList]);
+
+  const upcomingList = useMemo(() => processedRacesList.filter(r => {
+    const d = parseDate(r.日期);
+    return !r.完成 && (d == null || d >= now);
+  }), [processedRacesList]);
+
+  // Fallback: if the selected filter yields nothing, show the other category
+  const isFallback = (filter === "completed" && completedList.length === 0 && upcomingList.length > 0)
+                  || (filter === "upcoming"  && upcomingList.length  === 0 && completedList.length > 0);
+
   const filtered = useMemo(() => {
-    return processedRacesList.filter((r) => {
-      const d = parseDate(r.日期);
-      if (filter === "completed") return r.完成 || (d && d < now);
-      if (filter === "upcoming")  return !r.完成 && (!d || d >= now);
-      return true;
-    });
-  }, [processedRacesList, filter]);
+    if (filter === "completed") return completedList.length > 0 ? completedList : upcomingList;
+    if (filter === "upcoming")  return upcomingList.length  > 0 ? upcomingList  : completedList;
+    return processedRacesList;
+  }, [processedRacesList, filter, completedList, upcomingList]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -255,6 +266,15 @@ export default function RaceRecordTab() {
           {sorted.length} race{sorted.length !== 1 ? "s" : ""}
         </span>
       </div>
+
+      {/* ── Fallback notice ─────────────────────────────────── */}
+      {isFallback && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+          {filter === "completed"
+            ? "No completed races yet — showing upcoming races instead."
+            : "No upcoming races — showing completed races instead."}
+        </div>
+      )}
 
       {/* ── Race cards grid ─────────────────────────────────── */}
       {sorted.length === 0 ? (
