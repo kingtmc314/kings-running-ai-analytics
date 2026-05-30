@@ -36,3 +36,6 @@
 - [ ] Transform and insert Heart Rate data into Supabase heart_rate_logs table
 - [ ] Verify row counts in Supabase match Google Sheets
 - [ ] Update version to v1.2.0 and save checkpoint
+
+## Version History (continued)
+- v1.2.0 — Google Sheets → Supabase data migration (body_composition: 18, heart_rate_logs: 255, sleep_logs: 249)

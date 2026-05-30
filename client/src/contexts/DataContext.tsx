@@ -111,9 +111,13 @@ function mapSupabaseSleep(s: SupabaseSleepLog): SleepRecord {
   return {
     _row: s.id,
     Date: s.date,
-    Score: String(s.score ?? ""),
-    "Resting Heart Rate": String(s.resting_heart_rate ?? ""),
-    "Body Battery": String(s.body_battery_max ?? ""),
+    Score: String(s.sleepScore ?? ""),
+    "Resting Heart Rate": "",
+    "Body Battery": String(s.bodyBattery ?? ""),
+    "Sleep Quality": s.sleepQuality ?? "",
+    "Sleep Duration": String(s.sleepDuration ?? ""),
+    "Pulse Ox": String(s.pulseOx ?? ""),
+    Respiration: String(s.respiration ?? ""),
     Notes: s.notes ?? "",
     _supabaseId: s.id,
   } as unknown as SleepRecord;
@@ -123,8 +127,10 @@ function mapSupabaseHR(h: SupabaseHeartRateLog): HeartRateRecord {
   return {
     _row: h.id,
     Date: h.date,
-    Resting: String(h.resting_heart_rate ?? ""),
-    High: String(h.max_heart_rate ?? ""),
+    Resting: String(h.restingHr ?? ""),
+    High: String(h.highHr ?? ""),
+    HRV: String(h.hrv ?? ""),
+    AvgHR: String(h.avgHr ?? ""),
     _supabaseId: h.id,
   } as unknown as HeartRateRecord;
 }
