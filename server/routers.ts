@@ -1,28 +1,30 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
+// =============================================================
+// King's Running AI Analytics — tRPC Routers
+// Auth: Supabase Auth (replaces Manus OAuth)
+// =============================================================
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    // Returns the current Supabase user (or null if not authenticated)
+    me: publicProcedure.query(opts => {
+      const user = opts.ctx.user;
+      if (!user) return null;
       return {
-        success: true,
-      } as const;
+        id: user.id,
+        email: user.email ?? null,
+        name: user.user_metadata?.name ?? user.email ?? null,
+        role: (user.user_metadata?.role as string) ?? "user",
+      };
+    }),
+    // Logout is handled client-side via supabase.auth.signOut()
+    // This endpoint is kept for compatibility but does nothing server-side
+    logout: publicProcedure.mutation(() => {
+      return { success: true } as const;
     }),
   }),
-
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
 });
 
 export type AppRouter = typeof appRouter;

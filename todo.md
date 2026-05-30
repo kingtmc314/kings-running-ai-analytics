@@ -22,20 +22,46 @@
 - [x] Remove all sheetsApi updateRow/deleteRow imports from all tabs
 - [x] Save checkpoint
 
+## Google Sheets → Supabase Data Migration (Body/Sleep/Heart Rate)
+
+- [x] Fetch Body Composition data from Google Sheets
+- [x] Fetch Sleep data from Google Sheets
+- [x] Fetch Heart Rate data from Google Sheets
+- [x] Transform and insert Body data into Supabase body_composition table (18 rows)
+- [x] Transform and insert Sleep data into Supabase sleep_logs table (249 rows)
+- [x] Transform and insert Heart Rate data into Supabase heart_rate_logs table (255 rows)
+- [x] Verify row counts in Supabase match Google Sheets
+- [x] Update version to v1.2.0 and save checkpoint
+
+## Bug Fixes (v1.2.1)
+
+- [x] Fix Heart Rate tab showing blank bpm values — TypeScript interfaces updated to use correct camelCase column names (restingHr, highHr, avgHr, hrv)
+- [x] Fix Sleep tab showing blank values — TypeScript interfaces updated (sleepScore, bodyBattery, pulseOx, respiration, sleepQuality)
+- [x] Fix Race Record tab showing all races as "Finished" — race status logic now correctly checks finish_time !== "False" (string) instead of truthy check
+- [x] Update version to v1.2.1 and save checkpoint
+
 ## Version History
 - v1.0.0 — Initial Google Sheets integration
 - v1.1.0 — Supabase migration (complete)
+- v1.2.0 — Body/Sleep/Heart Rate data migrated to Supabase
+- v1.2.1 — Bug fixes: Heart Rate, Sleep, Race Record tabs all working correctly
 
-## Google Sheets → Supabase Data Migration (Body/Sleep/Heart Rate)
-
-- [ ] Fetch Body Composition data from Google Sheets
-- [ ] Fetch Sleep data from Google Sheets
-- [ ] Fetch Heart Rate data from Google Sheets
-- [ ] Transform and insert Body data into Supabase body_composition table
-- [ ] Transform and insert Sleep data into Supabase sleep_logs table
-- [ ] Transform and insert Heart Rate data into Supabase heart_rate_logs table
-- [ ] Verify row counts in Supabase match Google Sheets
-- [ ] Update version to v1.2.0 and save checkpoint
-
-## Version History (continued)
-- v1.2.0 — Google Sheets → Supabase data migration (body_composition: 18, heart_rate_logs: 255, sleep_logs: 249)
+## Vercel Migration (v1.3.0)
+- [x] Replace Manus OAuth with Supabase Auth (email/password)
+- [x] Create Login.tsx page with Supabase Auth sign-in
+- [x] Create AuthGuard.tsx component for protected routes
+- [x] Create useSupabaseAuth.ts hook (replaces useAuth)
+- [x] Update server/_core/context.ts to verify Supabase JWT tokens
+- [x] Update server/_core/trpc.ts to use Supabase User type
+- [x] Update server/routers.ts to return Supabase user info
+- [x] Stub out Manus OAuth (oauth.ts, sdk.ts) — no longer needed
+- [x] Replace server/db.ts Drizzle/MySQL with Supabase-only stub
+- [x] Update App.tsx with /login route and AuthGuard
+- [x] Create vercel.json for Vercel deployment
+- [x] Create api/server.ts Vercel serverless function entry point
+- [x] Update build script to compile api/server.ts
+- [x] Update auth.logout.test.ts to use Supabase User type
+- [x] All 16 tests pass
+- [x] Production build succeeds (dist/public + api/server.js)
+- [x] Update version to v1.3.0
+- [ ] Save checkpoint and push to GitHub
