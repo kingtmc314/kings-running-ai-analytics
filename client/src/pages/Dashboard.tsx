@@ -168,7 +168,7 @@ export default function Dashboard() {
             )}
           </button>
           {sidebarOpen && (
-            <p className="text-center text-[10px] text-muted-foreground/50 select-none">v1.1.0 · Supabase</p>
+            <p className="text-center text-[10px] text-muted-foreground/50 select-none">v1.2.0 · Supabase</p>
           )}
         </div>
       </aside>

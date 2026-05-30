@@ -19,7 +19,37 @@
 ## heart_rate_logs
 - id: integer (NOT NULL)
 - userId: integer (NOT NULL)
-- (more columns - need to check)
+- date: date (NOT NULL)
+- restingHr: integer
+- highHr: integer
+- hrv: integer
+- avgHr: integer
+- zone1: integer
+- zone2: integer
+- zone3: integer
+- zone4: integer
+- zone5: integer
+- notes: text
+- source: character varying
+- createdAt: timestamp without time zone (NOT NULL)
+- updatedAt: timestamp without time zone (NOT NULL)
+
+## sleep_logs
+- id: integer (NOT NULL)
+- userId: integer (NOT NULL)
+- date: date (NOT NULL)
+- sleepScore: integer
+- bodyBattery: integer
+- pulseOx: numeric
+- respiration: numeric
+- stress: integer
+- sleepQuality: character varying
+- sleepDuration: numeric
+- deepSleep: numeric
+- remSleep: numeric
+- lightSleep: numeric
+- awakeDuration: numeric
+- notes: text
 - source: character varying
 - createdAt: timestamp without time zone (NOT NULL)
 - updatedAt: timestamp without time zone (NOT NULL)

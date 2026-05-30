@@ -25,3 +25,14 @@
 ## Version History
 - v1.0.0 — Initial Google Sheets integration
 - v1.1.0 — Supabase migration (complete)
+
+## Google Sheets → Supabase Data Migration (Body/Sleep/Heart Rate)
+
+- [ ] Fetch Body Composition data from Google Sheets
+- [ ] Fetch Sleep data from Google Sheets
+- [ ] Fetch Heart Rate data from Google Sheets
+- [ ] Transform and insert Body data into Supabase body_composition table
+- [ ] Transform and insert Sleep data into Supabase sleep_logs table
+- [ ] Transform and insert Heart Rate data into Supabase heart_rate_logs table
+- [ ] Verify row counts in Supabase match Google Sheets
+- [ ] Update version to v1.2.0 and save checkpoint
